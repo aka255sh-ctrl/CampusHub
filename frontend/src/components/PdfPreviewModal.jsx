@@ -1,7 +1,15 @@
 export default function PdfPreviewModal({ fileUrl, title, onClose }) {
   if (!fileUrl) return null;
 
-  const isImage = fileUrl.match(/\.(jpeg|jpg|gif|png)$/i);
+  // File type detection
+  const isImage = fileUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i);
+  const isPdf = fileUrl.match(/\.pdf($|\?)/i);
+  const isDoc = fileUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)($|\?)/i);
+
+  // Fallback to Google Docs Viewer if it's an online document/PDF for 100% reliable embed
+  const viewerUrl = (isPdf || isDoc || fileUrl.startsWith("http"))
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`
+    : fileUrl;
 
   return (
     <div
@@ -17,64 +25,79 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
         alignItems: "center",
         justifyContent: "center",
         zIndex: 2000,
-        padding: "20px",
+        padding: "10px", // Reduced for mobile screens
       }}
     >
       <div
         style={{
           backgroundColor: "#ffffff",
-          width: "90%",
+          width: "100%",
           maxWidth: "1000px",
-          height: "85vh",
-          borderRadius: "16px",
+          height: "92vh", // Takes full advantage of smartphone height
+          borderRadius: "12px",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
           overflow: "hidden",
         }}
       >
-        {/* Top Header */}
+        {/* Top Header - Responsive flex wrap for phones */}
         <div
           style={{
-            padding: "16px 20px",
+            padding: "12px 16px",
             borderBottom: "1px solid #e2e8f0",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
             backgroundColor: "#f8fafc",
           }}
         >
-          <div>
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#0f172a" }}>
+          <div style={{ minWidth: "160px", flex: "1 1 auto" }}>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "15px",
+                fontWeight: "700",
+                color: "#0f172a",
+                wordBreak: "break-word",
+              }}
+            >
               {title || "Document Preview"}
             </h3>
-            <span style={{ fontSize: "12px", color: "#64748b" }}>In-App Secure Reader</span>
+            <span style={{ fontSize: "11px", color: "#64748b" }}>
+              In-App Secure Reader
+            </span>
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
             <a
               href={fileUrl}
               download
               target="_blank"
               rel="noreferrer"
               style={{
-                padding: "8px 14px",
+                padding: "6px 12px",
                 backgroundColor: "#2563eb",
                 color: "#fff",
-                borderRadius: "8px",
+                borderRadius: "6px",
                 fontSize: "12px",
                 fontWeight: "600",
                 textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
               }}
             >
-              Direct Download
+              Download
             </a>
             <button
               onClick={onClose}
               style={{
-                padding: "8px 14px",
+                padding: "6px 12px",
                 backgroundColor: "#f1f5f9",
                 border: "1px solid #cbd5e1",
-                borderRadius: "8px",
+                borderRadius: "6px",
+                fontSize: "12px",
                 fontWeight: "700",
                 cursor: "pointer",
               }}
@@ -84,19 +107,40 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
           </div>
         </div>
 
-        {/* Viewer Canvas */}
-        <div style={{ flex: 1, backgroundColor: "#334155", display: "flex", justifyContent: "center", alignItems: "center" }}>
+        {/* Universal Viewer Canvas */}
+        <div
+          style={{
+            flex: 1,
+            backgroundColor: "#1e293b",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            position: "relative",
+            overflow: "auto",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           {isImage ? (
             <img
               src={fileUrl}
               alt={title}
-              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                padding: "8px",
+              }}
             />
           ) : (
             <iframe
-              src={fileUrl}
+              src={viewerUrl}
               title={title}
-              style={{ width: "100%", height: "100%", border: "none" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                border: "none",
+                display: "block",
+              }}
             />
           )}
         </div>
