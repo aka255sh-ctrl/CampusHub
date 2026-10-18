@@ -8,15 +8,11 @@ const db = require("../config/db");
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "campushub-development-secret";
-// Purani line:
-// const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
-
-// Is line se replace karein:
 const GOOGLE_CLIENT_ID =
   process.env.GOOGLE_CLIENT_ID ||
   process.env.VITE_GOOGLE_CLIENT_ID ||
   "194527743131-ismov6cnqmcgq7ppisn3so4pruafa37d.apps.googleusercontent.com";
-  
+
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // JWT Middleware
@@ -52,28 +48,27 @@ router.post("/signup", async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     db.query("SELECT id FROM users WHERE email = ?", [normalizedEmail], async (err, results) => {
-      if (err) return res.status(500).json({ message: "Database error." });
+      if (err) {
+        console.error("SIGNUP DB CHECK ERROR:", err);
+        return res.status(500).json({ message: "Database error.", error: err.message });
+      }
       if (results.length > 0) return res.status(409).json({ message: "Email already registered." });
 
       try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const insertSql = `
-          INSERT INTO users (name, email, password, course, semester, college)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO users (name, email, password)
+          VALUES (?, ?, ?)
         `;
 
         db.query(
           insertSql,
-          [
-            normalizedName,
-            normalizedEmail,
-            hashedPassword,
-            course || "Diploma in Computer Science",
-            semester || "5th Semester",
-            college || "Government Polytechnic",
-          ],
+          [normalizedName, normalizedEmail, hashedPassword],
           (insertErr, result) => {
-            if (insertErr) return res.status(500).json({ message: "Failed to create account." });
+            if (insertErr) {
+              console.error("SIGNUP INSERT ERROR:", insertErr);
+              return res.status(500).json({ message: "Failed to create account.", error: insertErr.message });
+            }
             return res.status(201).json({
               message: "Account created successfully!",
               userId: result.insertId,
@@ -98,10 +93,13 @@ router.post("/login", (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const sql = "SELECT id, name, email, password, course, semester, college FROM users WHERE email = ?";
+  const sql = "SELECT * FROM users WHERE email = ?";
 
   db.query(sql, [normalizedEmail], async (err, results) => {
-    if (err) return res.status(500).json({ message: "Database error." });
+    if (err) {
+      console.error("LOGIN DB ERROR:", err);
+      return res.status(500).json({ message: "Database error.", error: err.message });
+    }
     if (results.length === 0) return res.status(401).json({ message: "Invalid email or password." });
 
     const user = results[0];
@@ -129,10 +127,6 @@ router.post("/google", async (req, res) => {
     const { credential } = req.body;
     if (!credential) return res.status(400).json({ message: "Google credential is required." });
 
-    if (!GOOGLE_CLIENT_ID) {
-      return res.status(500).json({ message: "Google Client ID is not configured on the server." });
-    }
-
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
       audience: GOOGLE_CLIENT_ID,
@@ -142,91 +136,80 @@ router.post("/google", async (req, res) => {
     if (!payload) return res.status(401).json({ message: "Invalid Google account." });
 
     const googleId = payload.sub;
-    const googleEmail = payload.email;
+    const googleEmail = payload.email.toLowerCase().trim();
     const googleName = payload.name || "Google User";
 
-    const findUserSql = `
-      SELECT id, name, email, password, google_id, course, semester, college
-      FROM users
-      WHERE google_id = ? OR email = ?
-      LIMIT 1
-    `;
+    const findUserSql = "SELECT * FROM users WHERE email = ? LIMIT 1";
 
-    db.query(findUserSql, [googleId, googleEmail], (err, results) => {
-      if (err) return res.status(500).json({ message: "Database error." });
+    db.query(findUserSql, [googleEmail], (err, results) => {
+      if (err) {
+        console.error("GOOGLE AUTH DB LOOKUP ERROR:", err);
+        return res.status(500).json({ message: "Database error.", error: err.message });
+      }
 
       if (results.length > 0) {
         const user = results[0];
-        const updateGoogleId = "UPDATE users SET google_id = ? WHERE id = ?";
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1d" });
+        delete user.password;
 
-        db.query(updateGoogleId, [googleId, user.id], (updateErr) => {
-          if (updateErr) return res.status(500).json({ message: "Failed to update Google account." });
-
-          const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1d" });
-          delete user.password;
-
-          return res.json({
-            message: "Google login successful!",
-            token,
-            user: { ...user, google_id: googleId },
-          });
+        return res.json({
+          message: "Google login successful!",
+          token,
+          user,
         });
-        return;
       }
 
-      const insertSql = `
-        INSERT INTO users (name, email, password, google_id, course, semester, college)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
+      const insertSql = "INSERT INTO users (name, email) VALUES (?, ?)";
 
-      db.query(
-        insertSql,
-        [googleName, googleEmail, null, googleId, "Diploma in Computer Science", "5th Semester", "Government Polytechnic"],
-        (insertErr, result) => {
-          if (insertErr) return res.status(500).json({ message: "Failed to create Google account." });
-
-          const newUser = {
-            id: result.insertId,
-            name: googleName,
-            email: googleEmail,
-            google_id: googleId,
-            course: "Diploma in Computer Science",
-            semester: "5th Semester",
-            college: "Government Polytechnic",
-          };
-
-          const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: "1d" });
-          return res.status(201).json({ message: "Google account created successfully!", token, user: newUser });
+      db.query(insertSql, [googleName, googleEmail], (insertErr, result) => {
+        if (insertErr) {
+          console.error("GOOGLE USER INSERT ERROR:", insertErr);
+          return res.status(500).json({ message: "Failed to create Google account.", error: insertErr.message });
         }
-      );
+
+        const newUser = {
+          id: result.insertId,
+          name: googleName,
+          email: googleEmail,
+        };
+
+        const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: "1d" });
+        return res.status(201).json({ message: "Google account created successfully!", token, user: newUser });
+      });
     });
   } catch (error) {
-    return res.status(401).json({ message: "Google authentication failed." });
+    console.error("GOOGLE AUTH TOKEN ERROR:", error);
+    return res.status(401).json({ message: "Google authentication failed.", error: error.message });
   }
 });
 
 // GET PROFILE
 router.get("/profile", authenticateToken, (req, res) => {
-  const sql = "SELECT id, name, email, course, semester, college FROM users WHERE id = ? LIMIT 1";
+  const sql = "SELECT * FROM users WHERE id = ? LIMIT 1";
   db.query(sql, [req.user.id], (err, results) => {
-    if (err) return res.status(500).json({ message: "Failed to load profile." });
+    if (err) {
+      console.error("GET PROFILE DB ERROR:", err);
+      return res.status(500).json({ message: "Failed to load profile." });
+    }
     if (results.length === 0) return res.status(404).json({ message: "Student account not found." });
-    return res.json({ message: "Profile loaded successfully.", user: results[0] });
+    const user = results[0];
+    delete user.password;
+    return res.json({ message: "Profile loaded successfully.", user });
   });
 });
 
-// UPDATE PROFILE BY ID (Used by Profile.jsx)
+// UPDATE PROFILE BY ID
 router.put("/profile/:id", async (req, res) => {
   const userId = req.params.id;
-  const { name, course, semester, password } = req.body;
+  const { name, password } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ message: "Name is required." });
   }
 
   try {
-    let sql = "UPDATE users SET name = ?, course = ?, semester = ?";
-    let params = [name.trim(), course ? course.trim() : "", semester || "5th Semester"];
+    let sql = "UPDATE users SET name = ?";
+    let params = [name.trim()];
 
     if (password && password.trim() !== "") {
       const hashedPassword = await bcrypt.hash(password.trim(), 10);
@@ -239,7 +222,7 @@ router.put("/profile/:id", async (req, res) => {
 
     db.query(sql, params, (err, result) => {
       if (err) {
-        console.error("Database update error:", err);
+        console.error("UPDATE PROFILE DB ERROR:", err);
         return res.status(500).json({ message: "Failed to update profile." });
       }
 
@@ -249,12 +232,7 @@ router.put("/profile/:id", async (req, res) => {
 
       return res.json({
         message: "Profile updated successfully!",
-        user: {
-          id: userId,
-          name: name.trim(),
-          course: course ? course.trim() : "",
-          semester: semester || "5th Semester",
-        },
+        user: { id: userId, name: name.trim() },
       });
     });
   } catch (error) {
