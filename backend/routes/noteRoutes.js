@@ -56,7 +56,7 @@ router.post("/upload", upload.single("pdfFile"), (req, res) => {
     });
   }
 
-  const file_url = `http://localhost:5000/uploads/${req.file.filename}`;
+  const file_url = `https://campushub-backend-6rtk.onrender.com/uploads/${req.file.filename}`;
 
   const insertSql = `
     INSERT INTO notes (title, subject, semester, file_url)

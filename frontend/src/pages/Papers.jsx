@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
-const PAPERS_API = "http://localhost:5000/api/question-papers";
+const PAPERS_API = "https://campushub-backend-6rtk.onrender.com/api/question-papers";
 
 export default function Papers() {
   const [papers, setPapers] = useState([]);

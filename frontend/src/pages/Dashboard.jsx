@@ -49,11 +49,11 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const [notesRes, papersRes, noticesRes, studentsRes, subsRes] = await Promise.all([
-        fetch("http://localhost:5000/api/notes"),
-        fetch("http://localhost:5000/api/question-papers"),
-        fetch("http://localhost:5000/api/notices"),
-        fetch("http://localhost:5000/api/admin/students"),
-        fetch("http://localhost:5000/api/admin/submissions"),
+        fetch("https://campushub-backend-6rtk.onrender.com/api/notes"),
+        fetch("https://campushub-backend-6rtk.onrender.com/api/question-papers"),
+        fetch("https://campushub-backend-6rtk.onrender.com/api/notices"),
+        fetch("https://campushub-backend-6rtk.onrender.com/api/admin/students"),
+        fetch("https://campushub-backend-6rtk.onrender.com/api/admin/submissions"),
       ]);
 
       const notesData = await notesRes.json();
@@ -85,7 +85,7 @@ export default function Dashboard() {
   async function handleDeleteNote(id) {
     if (!window.confirm("Teacher Action: Delete this study material?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/notes/${id}`, { method: "DELETE" });
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/notes/${id}`, { method: "DELETE" });
       if (res.ok) fetchDashboardData();
     } catch (err) {
       alert("Delete failed.");
@@ -95,7 +95,7 @@ export default function Dashboard() {
   async function handleDeleteNotice(id) {
     if (!window.confirm("Teacher Action: Delete this bulletin?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/notices/${id}`, { method: "DELETE" });
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/notices/${id}`, { method: "DELETE" });
       if (res.ok) fetchDashboardData();
     } catch (err) {
       alert("Delete failed.");
@@ -105,7 +105,7 @@ export default function Dashboard() {
   async function handleCreateNotice(e) {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5000/api/notices", {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/notices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(noticeForm),
@@ -135,7 +135,7 @@ export default function Dashboard() {
     if (!window.confirm(actionText)) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/users/${userId}/role`, {
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/admin/users/${userId}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: targetRole }),
@@ -154,7 +154,7 @@ export default function Dashboard() {
   // Teacher submission approve handler
   async function handleUpdateSubmissionStatus(subId) {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/submissions/${subId}`, {
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/admin/submissions/${subId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Verified & Approved" }),
@@ -241,7 +241,7 @@ export default function Dashboard() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/submissions", {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/submissions", {
         method: "POST",
         body: formData,
       });

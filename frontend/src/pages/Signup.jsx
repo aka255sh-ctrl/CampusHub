@@ -33,7 +33,7 @@ function Signup() {
       setLoading(true);
 
       const response = await fetch(
-        "http://localhost:5000/api/auth/signup",
+        "https://campushub-backend-6rtk.onrender.com/api/auth/signup",
         {
           method: "POST",
           headers: {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const PAPERS_API = "http://localhost:5000/api/question-papers";
+const PAPERS_API = "https://campushub-backend-6rtk.onrender.com/api/question-papers";
 
 export default function QuestionPapers() {
   const [papers, setPapers] = useState([]);

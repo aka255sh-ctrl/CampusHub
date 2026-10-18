@@ -99,7 +99,7 @@ app.get("/api/admin/students", (req, res) => {
 // ======================================
 app.post("/api/submissions", upload.single("submissionFile"), (req, res) => {
   const { student_id, student_name, assignment_title } = req.body;
-  const fileUrl = req.file ? `http://localhost:5000/uploads/${req.file.filename}` : null;
+  const fileUrl = req.file ? `https://campushub-backend-6rtk.onrender.com/uploads/${req.file.filename}` : null;
 
   if (!student_id || !assignment_title) {
     return res.status(400).json({ message: "Student ID and title required" });

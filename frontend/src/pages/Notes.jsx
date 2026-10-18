@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
-const NOTES_API = "http://localhost:5000/api/notes";
+const NOTES_API = "https://campushub-backend-6rtk.onrender.com/api/notes";
 
 export default function Notes() {
   const [previewFile, setPreviewFile] = useState(null);

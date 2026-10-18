@@ -33,7 +33,7 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/auth/change-password", {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/auth/change-password", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
