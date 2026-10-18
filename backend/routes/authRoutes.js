@@ -8,8 +8,15 @@ const db = require("../config/db");
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "campushub-development-secret";
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+// Purani line:
+// const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
 
+// Is line se replace karein:
+const GOOGLE_CLIENT_ID =
+  process.env.GOOGLE_CLIENT_ID ||
+  process.env.VITE_GOOGLE_CLIENT_ID ||
+  "194527743131-ismov6cnqmcgq7ppisn3so4pruafa37d.apps.googleusercontent.com";
+  
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // JWT Middleware

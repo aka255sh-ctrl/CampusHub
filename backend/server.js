@@ -12,7 +12,11 @@ const noteRoutes = require("./routes/noteRoutes");
 const questionPaperRoutes = require("./routes/questionPaperRoutes");
 
 const app = express();
-const PORT = 5000;
+// Purani line:
+// const PORT = 5000;
+
+// Is line se replace karein:
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -204,7 +208,7 @@ app.put("/api/admin/users/:id/role", (req, res) => {
       role: role,
     });
   });
-});
+}); 
 
 // ======================================
 // USER PROFILE: CHANGE PASSWORD & SYNC
