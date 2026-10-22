@@ -18,17 +18,17 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// 1. Cloudinary Configuration
+// 1. Cloudinary Config
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 2. Memory storage (Multer v2 aur Node v24 ke saath 100% crash-free)
+// 2. Memory storage
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Cloudinary upload stream helper
+// 3. Submissions ke liye Upload Helper
 const uploadToCloudinary = (buffer, originalname, folder = "campushub_submissions") => {
   return new Promise((resolve, reject) => {
     const cleanName = Date.now() + "-" + originalname.replace(/[^a-zA-Z0-9.]/g, "_");
@@ -36,6 +36,7 @@ const uploadToCloudinary = (buffer, originalname, folder = "campushub_submission
       {
         folder: folder,
         resource_type: "auto",
+        type: "upload",
         public_id: cleanName,
       },
       (error, result) => {
@@ -100,7 +101,7 @@ app.get("/api/admin/students", (req, res) => {
 });
 
 // ======================================
-// STUDENT ASSIGNMENT SUBMISSION (With Direct Cloudinary Upload)
+// STUDENT ASSIGNMENT SUBMISSION
 // ======================================
 app.post("/api/submissions", upload.single("submissionFile"), async (req, res) => {
   const { student_id, student_name, assignment_title } = req.body;
@@ -150,7 +151,7 @@ app.get("/api/admin/submissions", (req, res) => {
 });
 
 // ======================================
-// TEACHER: UPDATE SUBMISSION STATUS / APPROVE
+// TEACHER: UPDATE SUBMISSION STATUS
 // ======================================
 app.put("/api/admin/submissions/:id", (req, res) => {
   const submissionId = req.params.id;
@@ -196,7 +197,7 @@ app.put("/api/admin/users/:id/role", (req, res) => {
 });
 
 // ======================================
-// USER PROFILE: CHANGE PASSWORD & SYNC
+// USER PROFILE: CHANGE PASSWORD
 // ======================================
 app.put("/api/auth/change-password", (req, res) => {
   const { userId, currentPassword, newPassword } = req.body;
