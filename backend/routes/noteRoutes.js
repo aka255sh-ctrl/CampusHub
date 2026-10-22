@@ -1,3 +1,4 @@
+const { Readable } = require("stream");
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -14,10 +15,15 @@ cloudinary.config({
 // 2. Memory storage (Direct RAM buffer to Cloudinary stream)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// 3. Upload Helper Function
+// 3. Universal Buffer to Cloudinary Uploader (Empty File Fix with Stream Pipe)
 const uploadToCloudinary = (buffer, originalname, folder = "campushub_notes") => {
   return new Promise((resolve, reject) => {
+    if (!buffer || buffer.length === 0) {
+      return reject(new Error("File buffer is empty"));
+    }
+
     const cleanName = Date.now() + "-" + originalname.replace(/[^a-zA-Z0-9.]/g, "_");
+
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: folder,
@@ -30,7 +36,12 @@ const uploadToCloudinary = (buffer, originalname, folder = "campushub_notes") =>
         resolve(result.secure_url);
       }
     );
-    stream.end(buffer);
+
+    // Buffer ko Readable stream me convert karke pipe karein
+    const readableStream = new Readable();
+    readableStream.push(buffer);
+    readableStream.push(null);
+    readableStream.pipe(stream);
   });
 };
 

@@ -112,7 +112,7 @@ app.post("/api/submissions", upload.single("submissionFile"), async (req, res) =
 
   try {
     let fileUrl = null;
-    if (req.file) {
+    if (req.file && req.file.buffer) {
       fileUrl = await uploadToCloudinary(req.file.buffer, req.file.originalname, "campushub_submissions");
     }
 
@@ -137,7 +137,7 @@ app.post("/api/submissions", upload.single("submissionFile"), async (req, res) =
     console.error("Cloudinary submission error:", error);
     return res.status(500).json({ message: "File upload to cloud failed" });
   }
-});
+}); 
 
 // ======================================
 // TEACHER: GET ALL SUBMISSIONS
