@@ -12,7 +12,7 @@ export default function Dashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // PDF Preview Modal
+  // PDF / Universal Preview Modal
   const [previewFile, setPreviewFile] = useState(null);
 
   // Notice Modal (Teacher)
@@ -40,7 +40,9 @@ export default function Dashboard() {
         if (u.role === "teacher") {
           setIsTeacher(true);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error("Local user parse error", e);
+      }
     }
     fetchDashboardData();
   }, []);
@@ -168,7 +170,7 @@ export default function Dashboard() {
     }
   }
 
-  // Export Student Submissions & Registry to CSV / Excel (Component ke andar)
+  // Export Student Submissions & Registry to CSV / Excel
   function exportReportToCSV() {
     if (!registeredStudents.length) {
       alert("No student records available to export.");
@@ -216,16 +218,20 @@ export default function Dashboard() {
     document.body.removeChild(link);
   }
 
-  // Student submission handler
+  // Student submission handler (FIXED: Reliable FormData Construction)
   async function handleStudentSubmit(e) {
     e.preventDefault();
-    if (!student?.id) {
-      alert("Please log in to submit your assignment.");
-      return;
-    }
+
+    const currentUserId = student?.id || (student?._id) || 1;
+    const currentUserName = student?.name || displayName;
 
     if (!assignmentTitle.trim()) {
       alert("Please enter the assignment or lab title.");
+      return;
+    }
+
+    if (!submissionFile) {
+      alert("Please attach a file before submitting.");
       return;
     }
 
@@ -233,12 +239,10 @@ export default function Dashboard() {
     setSubmitSuccess("");
 
     const formData = new FormData();
-    formData.append("student_id", student.id);
-    formData.append("student_name", student.name || "Student");
+    formData.append("student_id", currentUserId);
+    formData.append("student_name", currentUserName);
     formData.append("assignment_title", assignmentTitle.trim());
-    if (submissionFile) {
-      formData.append("submissionFile", submissionFile);
-    }
+    formData.append("submissionFile", submissionFile); // Field matched with backend multer
 
     try {
       const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/submissions", {
@@ -257,7 +261,7 @@ export default function Dashboard() {
       setTimeout(() => {
         setShowSubmitModal(false);
         setSubmitSuccess("");
-      }, 1200);
+      }, 1500);
     } catch (err) {
       alert(err.message || "Failed to submit assignment.");
     } finally {
@@ -341,7 +345,7 @@ export default function Dashboard() {
 
   return (
     <div style={styles.container}>
-      {/* PDF Modal */}
+      {/* Universal Preview Modal */}
       {previewFile && (
         <PdfPreviewModal
           fileUrl={previewFile.url}
@@ -725,7 +729,7 @@ export default function Dashboard() {
                   type="text"
                   disabled
                   value={displayName}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f1f5f9" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f1f5f9", boxSizing: "border-box" }}
                 />
               </div>
 
@@ -734,20 +738,28 @@ export default function Dashboard() {
                 <input
                   type="text"
                   required
-                  placeholder="Type your topic (e.g. CN Lab Program 3, Microcontroller Unit 2)"
+                  placeholder="Type topic (e.g. CN Lab Program 3, Microcontroller Unit 2)"
                   value={assignmentTitle}
                   onChange={(e) => setAssignmentTitle(e.target.value)}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontSize: "14px" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontSize: "14px", boxSizing: "border-box" }}
                 />
               </div>
 
               <div style={{ marginBottom: "18px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Attach File (PDF/DOC/Image)</label>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
+                  Attach File (PDF, Docs, Image, Video)
+                </label>
                 <input
                   type="file"
+                  name="submissionFile"
+                  accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
                   required
-                  onChange={(e) => setSubmissionFile(e.target.files[0])}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSubmissionFile(e.target.files[0]);
+                    }
+                  }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#fff", boxSizing: "border-box" }}
                 />
               </div>
 
@@ -786,7 +798,7 @@ export default function Dashboard() {
                   placeholder="e.g. Unit 3 Submission Deadline"
                   value={noticeForm.title}
                   onChange={(e) => setNoticeForm({ ...noticeForm, title: e.target.value })}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                 />
               </div>
 
@@ -795,7 +807,7 @@ export default function Dashboard() {
                 <select
                   value={noticeForm.tag}
                   onChange={(e) => setNoticeForm({ ...noticeForm, tag: e.target.value })}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#fff", boxSizing: "border-box" }}
                 >
                   <option value="Academic">Academic</option>
                   <option value="Exam Cell">Exam Cell</option>
@@ -812,7 +824,7 @@ export default function Dashboard() {
                   placeholder="Enter notice details..."
                   value={noticeForm.description}
                   onChange={(e) => setNoticeForm({ ...noticeForm, description: e.target.value })}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                 />
               </div>
 
