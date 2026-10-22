@@ -3,11 +3,10 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
 
   // File type detection
   const isImage = fileUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i);
-  const isPdf = fileUrl.match(/\.pdf($|\?)/i);
   const isDoc = fileUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)($|\?)/i);
 
-  // Fallback to Google Docs Viewer if it's an online document/PDF for 100% reliable embed
-  const viewerUrl = (isPdf || isDoc || fileUrl.startsWith("http"))
+  // Office documents ke liye Google viewer fallback, warna direct fileUrl (PDFs/Images direct load hoti hain)
+  const viewerUrl = isDoc
     ? `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`
     : fileUrl;
 
@@ -25,7 +24,7 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
         alignItems: "center",
         justifyContent: "center",
         zIndex: 2000,
-        padding: "10px", // Reduced for mobile screens
+        padding: "10px",
       }}
     >
       <div
@@ -33,7 +32,7 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
           backgroundColor: "#ffffff",
           width: "100%",
           maxWidth: "1000px",
-          height: "92vh", // Takes full advantage of smartphone height
+          height: "92vh",
           borderRadius: "12px",
           display: "flex",
           flexDirection: "column",
@@ -41,7 +40,7 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
           overflow: "hidden",
         }}
       >
-        {/* Top Header - Responsive flex wrap for phones */}
+        {/* Top Header */}
         <div
           style={{
             padding: "12px 16px",
@@ -71,6 +70,26 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
             </span>
           </div>
           <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+            {/* Direct Open / Pop-out button */}
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                padding: "6px 12px",
+                backgroundColor: "#f1f5f9",
+                border: "1px solid #cbd5e1",
+                color: "#334155",
+                borderRadius: "6px",
+                fontSize: "12px",
+                fontWeight: "600",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              Open New Tab ↗
+            </a>
             <a
               href={fileUrl}
               download
@@ -132,16 +151,28 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
               }}
             />
           ) : (
-            <iframe
-              src={viewerUrl}
-              title={title}
+            <object
+              data={viewerUrl}
+              type="application/pdf"
               style={{
                 width: "100%",
                 height: "100%",
                 border: "none",
                 display: "block",
               }}
-            />
+            >
+              {/* Fallback agar browser object tag support na kare */}
+              <iframe
+                src={viewerUrl}
+                title={title}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  display: "block",
+                }}
+              />
+            </object>
           )}
         </div>
       </div>
