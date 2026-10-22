@@ -18,23 +18,32 @@ const app = express();
 // Is line se replace karein:
 const PORT = process.env.PORT || 5000;
 
+// Purani line:
+// const fileUrl = req.file ? `https://campushub-backend-6rtk.onrender.com/uploads/${req.file.filename}` : null;
+
+// Nayi line (Cloudinary ka permanent secure URL direct milta hai):
+const fileUrl = req.file ? (req.file.path || req.file.secure_url) : null;
+
 app.use(cors());
 app.use(express.json());
 
-// 1. Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-// 2. Setup Multer Storage for Assignment Files
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+// 1. Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// 2. Cloudinary storage engine
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "campushub_docs",
+    resource_type: "auto",
+    public_id: (req, file) => Date.now() + "-" + file.originalname.replace(/[^a-zA-Z0-9.]/g, "_"),
   },
 });
 const upload = multer({ storage: storage });
