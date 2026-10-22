@@ -5,6 +5,7 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 
 const db = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
@@ -12,44 +13,39 @@ const noteRoutes = require("./routes/noteRoutes");
 const questionPaperRoutes = require("./routes/questionPaperRoutes");
 
 const app = express();
-// Purani line:
-// const PORT = 5000;
-
-// Is line se replace karein:
 const PORT = process.env.PORT || 5000;
-
-// Purani line:
-// const fileUrl = req.file ? `https://campushub-backend-6rtk.onrender.com/uploads/${req.file.filename}` : null;
-
-// Nayi line (Cloudinary ka permanent secure URL direct milta hai):
-const fileUrl = req.file ? (req.file.path || req.file.secure_url) : null;
 
 app.use(cors());
 app.use(express.json());
 
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-
-// 1. Cloudinary configuration
+// 1. Cloudinary Configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 2. Cloudinary storage engine
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "campushub_docs",
-    resource_type: "auto",
-    public_id: (req, file) => Date.now() + "-" + file.originalname.replace(/[^a-zA-Z0-9.]/g, "_"),
-  },
-});
-const upload = multer({ storage: storage });
+// 2. Memory storage (Multer v2 aur Node v24 ke saath 100% crash-free)
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Uploads directory serve karein static files ke liye
-app.use("/uploads", express.static(uploadsDir));
+// Cloudinary upload stream helper
+const uploadToCloudinary = (buffer, originalname, folder = "campushub_submissions") => {
+  return new Promise((resolve, reject) => {
+    const cleanName = Date.now() + "-" + originalname.replace(/[^a-zA-Z0-9.]/g, "_");
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: folder,
+        resource_type: "auto",
+        public_id: cleanName,
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+    stream.end(buffer);
+  });
+};
 
 // Route handlers
 app.use("/api/auth", authRoutes);
@@ -104,33 +100,42 @@ app.get("/api/admin/students", (req, res) => {
 });
 
 // ======================================
-// STUDENT ASSIGNMENT SUBMISSION (With File Upload)
+// STUDENT ASSIGNMENT SUBMISSION (With Direct Cloudinary Upload)
 // ======================================
-app.post("/api/submissions", upload.single("submissionFile"), (req, res) => {
+app.post("/api/submissions", upload.single("submissionFile"), async (req, res) => {
   const { student_id, student_name, assignment_title } = req.body;
-  const fileUrl = req.file ? `https://campushub-backend-6rtk.onrender.com/uploads/${req.file.filename}` : null;
 
   if (!student_id || !assignment_title) {
     return res.status(400).json({ message: "Student ID and title required" });
   }
 
-  const sql = `
-    INSERT INTO student_submissions 
-    (student_id, student_name, assignment_title, file_url, status) 
-    VALUES (?, ?, ?, ?, 'Submitted')
-  `;
-
-  db.query(sql, [student_id, student_name || "Student", assignment_title, fileUrl], (err, result) => {
-    if (err) {
-      console.error("Submission DB error:", err);
-      return res.status(500).json({ message: "Submission failed in database" });
+  try {
+    let fileUrl = null;
+    if (req.file) {
+      fileUrl = await uploadToCloudinary(req.file.buffer, req.file.originalname, "campushub_submissions");
     }
-    return res.json({ 
-      message: "Assignment submitted successfully!", 
-      submissionId: result.insertId,
-      file_url: fileUrl 
+
+    const sql = `
+      INSERT INTO student_submissions 
+      (student_id, student_name, assignment_title, file_url, status) 
+      VALUES (?, ?, ?, ?, 'Submitted')
+    `;
+
+    db.query(sql, [student_id, student_name || "Student", assignment_title, fileUrl], (err, result) => {
+      if (err) {
+        console.error("Submission DB error:", err);
+        return res.status(500).json({ message: "Submission failed in database" });
+      }
+      return res.json({ 
+        message: "Assignment submitted successfully!", 
+        submissionId: result.insertId,
+        file_url: fileUrl 
+      });
     });
-  });
+  } catch (error) {
+    console.error("Cloudinary submission error:", error);
+    return res.status(500).json({ message: "File upload to cloud failed" });
+  }
 });
 
 // ======================================
@@ -166,7 +171,7 @@ app.put("/api/admin/submissions/:id", (req, res) => {
 // ======================================
 app.put("/api/admin/users/:id/role", (req, res) => {
   const targetUserId = req.params.id;
-  const { role } = req.body; // 'teacher' ya 'student'
+  const { role } = req.body;
 
   if (!["teacher", "student"].includes(role)) {
     return res.status(400).json({ message: "Invalid role specified." });
@@ -189,35 +194,6 @@ app.put("/api/admin/users/:id/role", (req, res) => {
     });
   });
 });
-
-// ======================================
-// TEACHER: PROMOTE / DEMOTE USER ROLE
-// ======================================
-app.put("/api/admin/users/:id/role", (req, res) => {
-  const targetUserId = req.params.id;
-  const { role } = req.body; // 'teacher' ya 'student'
-
-  if (!["teacher", "student"].includes(role)) {
-    return res.status(400).json({ message: "Invalid role specified." });
-  }
-
-  const sql = "UPDATE users SET role = ? WHERE id = ?";
-  db.query(sql, [role, targetUserId], (err, result) => {
-    if (err) {
-      console.error("Error updating user role:", err);
-      return res.status(500).json({ message: "Database error updating role." });
-    }
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
-    return res.json({
-      message: `User has been successfully granted ${role === "teacher" ? "Faculty Teacher" : "Student"} privileges! ✅`,
-      role: role,
-    });
-  });
-}); 
 
 // ======================================
 // USER PROFILE: CHANGE PASSWORD & SYNC
@@ -229,7 +205,6 @@ app.put("/api/auth/change-password", (req, res) => {
     return res.status(400).json({ message: "All fields are required." });
   }
 
-  // Find user
   db.query("SELECT * FROM users WHERE id = ?", [userId], (err, results) => {
     if (err || results.length === 0) {
       return res.status(404).json({ message: "User not found." });
@@ -237,12 +212,10 @@ app.put("/api/auth/change-password", (req, res) => {
 
     const user = results[0];
 
-    // Check old password (Direct comparison or bcrypt match)
     if (user.password !== currentPassword) {
       return res.status(401).json({ message: "Current password is incorrect." });
     }
 
-    // Update password
     db.query("UPDATE users SET password = ? WHERE id = ?", [newPassword, userId], (upErr) => {
       if (upErr) {
         return res.status(500).json({ message: "Failed to update password." });
@@ -252,7 +225,7 @@ app.put("/api/auth/change-password", (req, res) => {
   });
 });
 
-// App listen sabse aakhir me
+// App listen
 app.listen(PORT, () => {
-  console.log(`CampusHub server running on http://localhost:${PORT}`);
+  console.log(`CampusHub server running on port ${PORT}`);
 });
