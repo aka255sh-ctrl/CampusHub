@@ -100,44 +100,64 @@ app.get("/api/admin/students", (req, res) => {
   });
 });
 
+// STUDENT ASSIGNMENT SUBMISSION (With Direct Cloudinary Upload)
 // ======================================
-// STUDENT ASSIGNMENT SUBMISSION
-// ======================================
-app.post("/api/submissions", upload.single("submissionFile"), async (req, res) => {
-  const { student_id, student_name, assignment_title } = req.body;
+app.post(
+  "/api/submissions",
+  upload.fields([
+    { name: "submissionFile", maxCount: 1 },
+    { name: "file", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const { student_id, student_name, assignment_title } = req.body;
 
-  if (!student_id || !assignment_title) {
-    return res.status(400).json({ message: "Student ID and title required" });
-  }
-
-  try {
-    let fileUrl = null;
-    if (req.file && req.file.buffer) {
-      fileUrl = await uploadToCloudinary(req.file.buffer, req.file.originalname, "campushub_submissions");
-    }
-
-    const sql = `
-      INSERT INTO student_submissions 
-      (student_id, student_name, assignment_title, file_url, status) 
-      VALUES (?, ?, ?, ?, 'Submitted')
-    `;
-
-    db.query(sql, [student_id, student_name || "Student", assignment_title, fileUrl], (err, result) => {
-      if (err) {
-        console.error("Submission DB error:", err);
-        return res.status(500).json({ message: "Submission failed in database" });
+      if (!student_id || !assignment_title) {
+        return res.status(400).json({ message: "Student ID and title required" });
       }
-      return res.json({ 
-        message: "Assignment submitted successfully!", 
-        submissionId: result.insertId,
-        file_url: fileUrl 
-      });
-    });
-  } catch (error) {
-    console.error("Cloudinary submission error:", error);
-    return res.status(500).json({ message: "File upload to cloud failed" });
+
+      // Check whether Multer parsed via fields or single
+      const uploadedFile =
+        (req.files && (req.files.submissionFile?.[0] || req.files.file?.[0])) || req.file;
+
+      if (!uploadedFile || !uploadedFile.buffer || uploadedFile.buffer.length === 0) {
+        return res.status(400).json({ message: "File missing or empty buffer" });
+      }
+
+      // Cloudinary stream pipe upload
+      const fileUrl = await uploadToCloudinary(
+        uploadedFile.buffer,
+        uploadedFile.originalname,
+        "campushub_submissions"
+      );
+
+      const sql = `
+        INSERT INTO student_submissions 
+        (student_id, student_name, assignment_title, file_url, status) 
+        VALUES (?, ?, ?, ?, 'Submitted')
+      `;
+
+      db.query(
+        sql,
+        [student_id, student_name || "Student", assignment_title, fileUrl],
+        (err, result) => {
+          if (err) {
+            console.error("Submission DB error:", err);
+            return res.status(500).json({ message: "Submission failed in database" });
+          }
+          return res.json({
+            message: "Assignment submitted successfully!",
+            submissionId: result.insertId,
+            file_url: fileUrl,
+          });
+        }
+      );
+    } catch (error) {
+      console.error("Cloudinary submission error:", error);
+      return res.status(500).json({ message: "File upload to cloud failed" });
+    }
   }
-}); 
+); 
 
 // ======================================
 // TEACHER: GET ALL SUBMISSIONS
