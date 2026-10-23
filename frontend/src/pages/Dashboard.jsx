@@ -225,18 +225,22 @@ export default function Dashboard() {
         `"${st.role || "student"}"`,
         `"${sub ? sub.assignment_title : "No submission"}"`,
         `"${sub ? sub.status : "Pending"}"`,
-        `"${sub?.marks || "—"}"`,
-        `"${sub?.feedback || "—"}"`,
+        `"${sub?.marks ? sub.marks : "-"}"`, // Plain hyphen instead of em-dash
+        `"${sub?.feedback ? sub.feedback : "-"}"`,
       ];
     });
 
+    // \uFEFF (UTF-8 BOM) add karne se Excel me encoding kabhi corrupt nahi hoti
     const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+      "\uFEFF" +
+      headers.join(",") +
+      "\n" +
+      rows.map((e) => e.join(",")).join("\n");
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `CampusHub_Academic_Report_${new Date().toISOString().slice(0, 10)}.csv`
@@ -244,6 +248,7 @@ export default function Dashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   // Student submission handler
