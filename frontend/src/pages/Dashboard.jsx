@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [isTeacher, setIsTeacher] = useState(false);
   const [isRealTeacher, setIsRealTeacher] = useState(false);
@@ -14,18 +13,12 @@ export default function Dashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Student click par registered batchmates dekhne ke liye modal
+  // Modals state
   const [showStudentsModal, setShowStudentsModal] = useState(false);
-
-  // PDF Preview Modal
   const [previewFile, setPreviewFile] = useState(null);
-
-  // Grading Modal State
   const [gradingSub, setGradingSub] = useState(null);
   const [gradeMarks, setGradeMarks] = useState("");
   const [gradeFeedback, setGradeFeedback] = useState("");
-
-  // Notice Modal (Teacher)
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [noticeForm, setNoticeForm] = useState({
     title: "",
@@ -33,8 +26,6 @@ export default function Dashboard() {
     tag: "Academic",
     description: "",
   });
-
-  // Assignment Submission Modal (Student)
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [assignmentTitle, setAssignmentTitle] = useState("");
   const [submissionFile, setSubmissionFile] = useState(null);
@@ -97,15 +88,6 @@ export default function Dashboard() {
     }
   }
 
-  // Smooth scroll helper
-  function scrollToSection(id) {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
-  }
-
-  // Teacher actions (Protected)
   async function handleDeleteNote(id) {
     if (!isRealTeacher) return alert("Unauthorized access!");
     if (!window.confirm("Teacher Action: Delete this study material?")) return;
@@ -358,8 +340,10 @@ export default function Dashboard() {
       justifyContent: "space-between",
       alignItems: "center",
       cursor: "pointer",
-      transition: "all 0.2s ease-in-out",
-      boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+      textDecoration: "none",
+      color: "inherit",
+      boxSizing: "border-box",
+      width: "100%",
     },
     mainGrid: {
       display: "grid",
@@ -458,53 +442,41 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Clickable Metric Tabs Grid */}
+      {/* Guaranteed Clickable Metric Tabs */}
       <div style={styles.metricGrid}>
-        {/* Tab 1: Published Notes -> Navigates to /notes */}
-        <div
-          style={styles.metricCard}
-          onClick={() => navigate("/notes")}
-          title="Click to view all published notes"
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#2563eb")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
-        >
+        {/* Tab 1: Notes */}
+        <Link to="/notes" style={styles.metricCard} title="Click to view published notes">
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Published Notes</p>
             <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0, color: "#1e293b" }}>{stats.notesCount}</h3>
             <p style={{ fontSize: "12px", color: "#16a34a", margin: "4px 0 0 0", fontWeight: "600" }}>Explore Repository →</p>
           </div>
           <span style={{ fontSize: "28px" }}>📚</span>
-        </div>
+        </Link>
 
-        {/* Tab 2: Previous Papers -> Navigates to /papers */}
-        <div
-          style={styles.metricCard}
-          onClick={() => navigate("/papers")}
-          title="Click to view previous year question papers"
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#d97706")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
-        >
+        {/* Tab 2: Papers */}
+        <Link to="/papers" style={styles.metricCard} title="Click to view question papers">
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Previous Papers</p>
             <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0, color: "#1e293b" }}>{stats.papersCount}</h3>
             <p style={{ fontSize: "12px", color: "#d97706", margin: "4px 0 0 0", fontWeight: "600" }}>Mid & End Terms →</p>
           </div>
           <span style={{ fontSize: "28px" }}>📜</span>
-        </div>
+        </Link>
 
-        {/* Tab 3: Registered Users -> Opens Students Modal (Student) or Scrolls to Delegation (Teacher) */}
-        <div
-          style={styles.metricCard}
+        {/* Tab 3: Registered Users */}
+        <button
+          type="button"
           onClick={() => {
             if (isRealTeacher && isTeacher) {
-              scrollToSection("users-delegation-section");
+              const el = document.getElementById("users-delegation-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
             } else {
               setShowStudentsModal(true);
             }
           }}
-          title={isTeacher ? "Jump to Users Management table" : "View registered batch students"}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#2563eb")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+          style={{ ...styles.metricCard, textAlign: "left", background: "#fff", border: "1px solid #e2e8f0" }}
+          title={isTeacher ? "Jump to Management table" : "View batchmates list"}
         >
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Registered Users</p>
@@ -514,21 +486,22 @@ export default function Dashboard() {
             </p>
           </div>
           <span style={{ fontSize: "28px" }}>👥</span>
-        </div>
+        </button>
 
-        {/* Tab 4: Live Submissions -> Scrolls to Submissions Section */}
-        <div
-          style={styles.metricCard}
+        {/* Tab 4: Live Submissions */}
+        <button
+          type="button"
           onClick={() => {
             if (isRealTeacher && isTeacher) {
-              scrollToSection("users-delegation-section");
+              const el = document.getElementById("users-delegation-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
             } else {
-              scrollToSection("student-submissions-section");
+              const el = document.getElementById("student-submissions-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
             }
           }}
-          title="Click to view submissions & grades"
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#16a34a")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+          style={{ ...styles.metricCard, textAlign: "left", background: "#fff", border: "1px solid #e2e8f0" }}
+          title="Click to view submissions & evaluation"
         >
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Live Submissions</p>
@@ -536,7 +509,7 @@ export default function Dashboard() {
             <p style={{ fontSize: "12px", color: "#16a34a", margin: "4px 0 0 0", fontWeight: "600" }}>Check Evaluation ↓</p>
           </div>
           <span style={{ fontSize: "28px" }}>📋</span>
-        </div>
+        </button>
       </div>
 
       {/* Main Split Sections */}
@@ -616,7 +589,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Student View: My Submissions & Academic Grades Tracking Card */}
+      {/* Student View: My Submissions & Grades */}
       {!isTeacher && (
         <div id="student-submissions-section" style={{ ...styles.cardSection, marginTop: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
@@ -699,7 +672,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Teacher View: User Registry + Delegation Management + Submissions Evaluation */}
+      {/* Teacher View: User Registry + Submissions Evaluation */}
       {isRealTeacher && isTeacher && (
         <div id="users-delegation-section" style={{ ...styles.cardSection, marginTop: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
@@ -885,19 +858,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Student View Modal: Registered Batch Users List */}
+      {/* Student View Modal: Registered Students Directory */}
       {showStudentsModal && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(15,23,42,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "16px" }}>
-          <div style={{ backgroundColor: "#fff", borderRadius: "16px", maxWidth: "560px", width: "100%", padding: "24px", maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
+          <div style={{ backgroundColor: "#fff", borderRadius: "16px", maxWidth: "520px", width: "100%", padding: "24px", maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h2 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 4px 0", color: "#0f172a" }}>
-                  👥 Department Student Directory
-                </h2>
-                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
-                  Active students registered in Kalaburagi CSE Department.
-                </p>
-              </div>
+              <h2 style={{ fontSize: "18px", fontWeight: "800", margin: 0, color: "#0f172a" }}>
+                👥 Department Registered Batch
+              </h2>
               <button
                 onClick={() => setShowStudentsModal(false)}
                 style={{ background: "none", border: "none", fontSize: "18px", color: "#64748b", cursor: "pointer", fontWeight: "700" }}
@@ -908,10 +876,10 @@ export default function Dashboard() {
 
             <div style={{ overflowY: "auto", flex: 1 }}>
               {registeredStudents.map((st) => (
-                <div key={st.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", borderBottom: "1px solid #f1f5f9" }}>
+                <div key={st.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
                   <div>
                     <p style={{ margin: "0 0 2px 0", fontWeight: "700", color: "#1e293b", fontSize: "14px" }}>{st.name}</p>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>{st.email} • {st.course || "Diploma CS"}</p>
+                    <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>{st.email}</p>
                   </div>
                   <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 8px", borderRadius: "999px", backgroundColor: st.role === "teacher" ? "#fef3c7" : "#eff6ff", color: st.role === "teacher" ? "#b45309" : "#2563eb" }}>
                     {st.role === "teacher" ? "Faculty" : "Student"}
@@ -925,7 +893,7 @@ export default function Dashboard() {
                 onClick={() => setShowStudentsModal(false)}
                 style={{ padding: "8px 18px", backgroundColor: "#0f172a", color: "#fff", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "13px", cursor: "pointer" }}
               >
-                Close Directory
+                Close
               </button>
             </div>
           </div>
@@ -945,9 +913,7 @@ export default function Dashboard() {
 
             <form onSubmit={handleGradeSubmission}>
               <div style={{ marginBottom: "14px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
-                  Marks / Grade
-                </label>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Marks / Grade</label>
                 <input
                   type="text"
                   required
@@ -959,9 +925,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ marginBottom: "18px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
-                  Faculty Feedback / Remarks
-                </label>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Faculty Feedback</label>
                 <textarea
                   rows="3"
                   placeholder="Feedback on lab output, code structure, etc."
@@ -1019,7 +983,7 @@ export default function Dashboard() {
                 <input
                   type="text"
                   required
-                  placeholder="Type topic (e.g. CN Lab Program 3, Microcontroller Unit 2)"
+                  placeholder="e.g. Microcontroller Unit 2 Program"
                   value={assignmentTitle}
                   onChange={(e) => setAssignmentTitle(e.target.value)}
                   style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", fontSize: "14px", boxSizing: "border-box" }}
@@ -1027,9 +991,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ marginBottom: "18px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
-                  Attach File (PDF, Docs, Image, Video)
-                </label>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Attach File</label>
                 <input
                   type="file"
                   name="submissionFile"
