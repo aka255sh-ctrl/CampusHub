@@ -28,7 +28,7 @@ cloudinary.config({
 // 2. Memory storage
 const upload = multer({ storage: multer.memoryStorage() });
 
-// 3. Submissions ke liye Upload Helper
+// 3. Submissions ke liye Upload Helper (Stream Buffer Pipe)
 const uploadToCloudinary = (buffer, originalname, folder = "campushub_submissions") => {
   return new Promise((resolve, reject) => {
     const cleanName = Date.now() + "-" + originalname.replace(/[^a-zA-Z0-9.]/g, "_");
@@ -90,16 +90,21 @@ app.delete("/api/notices/:id", (req, res) => {
 });
 
 // ======================================
-// TEACHER: REGISTERED STUDENTS LIST
+// TEACHER: REGISTERED USERS & DELEGATION LIST (FIXED)
 // ======================================
 app.get("/api/admin/students", (req, res) => {
-  const sql = "SELECT id, name, email, course, semester, created_at FROM users WHERE role != 'teacher' OR role IS NULL ORDER BY id DESC";
+  // role column include kiya gaya hai aur sabhi users fetch honge
+  const sql = "SELECT id, name, email, role, course, semester, created_at FROM users ORDER BY id DESC";
   db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ message: "Error fetching users " });
+    if (err) {
+      console.error("Error fetching users list:", err);
+      return res.status(500).json({ message: "Error fetching users" });
+    }
     res.json({ students: results });
   });
 });
 
+// ======================================
 // STUDENT ASSIGNMENT SUBMISSION (With Direct Cloudinary Upload)
 // ======================================
 app.post(
@@ -116,7 +121,7 @@ app.post(
         return res.status(400).json({ message: "Student ID and title required" });
       }
 
-      // Check whether Multer parsed via fields or single
+      // Multer buffer extract
       const uploadedFile =
         (req.files && (req.files.submissionFile?.[0] || req.files.file?.[0])) || req.file;
 
@@ -157,7 +162,7 @@ app.post(
       return res.status(500).json({ message: "File upload to cloud failed" });
     }
   }
-); 
+);
 
 // ======================================
 // TEACHER: GET ALL SUBMISSIONS
@@ -171,7 +176,7 @@ app.get("/api/admin/submissions", (req, res) => {
 });
 
 // ======================================
-// TEACHER: GRADE & APPROVE SUBMISSION
+// TEACHER: GRADE & APPROVE SUBMISSION (Evaluation with Marks & Feedback)
 // ======================================
 app.put("/api/admin/submissions/:id", (req, res) => {
   const subId = req.params.id;
