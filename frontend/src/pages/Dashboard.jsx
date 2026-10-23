@@ -1,3 +1,4 @@
+import FileDropzone from "../components/FileDropzone";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PdfPreviewModal from "../components/PdfPreviewModal";
@@ -991,19 +992,15 @@ export default function Dashboard() {
               </div>
 
               <div style={{ marginBottom: "18px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>Attach File</label>
-                <input
-                  type="file"
-                  name="submissionFile"
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
+                  Attach Assignment File
+                  </label>
+                  <FileDropzone
+                  currentFile={submissionFile}
+                  onFileSelected={(file) => setSubmissionFile(file)}
+                  onClear={() => setSubmissionFile(null)}
                   accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-                  required
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setSubmissionFile(e.target.files[0]);
-                    }
-                  }}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#fff", boxSizing: "border-box" }}
-                />
+                  />
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
