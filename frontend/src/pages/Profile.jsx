@@ -2,42 +2,63 @@ import { useEffect, useState } from "react";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
+  const [submissionsCount, setSubmissionsCount] = useState(0);
+
+  // Change Password Form State
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [statusMessage, setStatusMessage] = useState({ text: "", isError: false });
-  const [loading, setLoading] = useState(false);
+  const [loadingPass, setLoadingPass] = useState(false);
+  const [passMsg, setPassMsg] = useState({ text: "", type: "" });
 
   useEffect(() => {
     const saved = localStorage.getItem("user");
     if (saved) {
       try {
-        setUser(JSON.parse(saved));
-      } catch (e) {}
+        const u = JSON.parse(saved);
+        setUser(u);
+        fetchUserSubmissions(u.id);
+      } catch (e) {
+        console.error(e);
+      }
     }
   }, []);
 
-  async function handlePasswordChange(e) {
-    e.preventDefault();
-    setStatusMessage({ text: "", isError: false });
-
-    if (newPassword !== confirmPassword) {
-      setStatusMessage({ text: "New passwords do not match.", isError: true });
-      return;
+  async function fetchUserSubmissions(userId) {
+    try {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/admin/submissions");
+      const data = await res.json();
+      if (data.submissions) {
+        const mySubs = data.submissions.filter((s) => s.student_id === userId);
+        setSubmissionsCount(mySubs.length);
+      }
+    } catch (err) {
+      console.error("Submissions load error", err);
     }
+  }
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    setPassMsg({ text: "", type: "" });
 
     if (newPassword.length < 6) {
-      setStatusMessage({ text: "Password must be at least 6 characters.", isError: true });
+      setPassMsg({ text: "New password must be at least 6 characters.", type: "error" });
       return;
     }
 
-    setLoading(true);
+    if (newPassword !== confirmPassword) {
+      setPassMsg({ text: "Passwords do not match.", type: "error" });
+      return;
+    }
+
+    setLoadingPass(true);
+
     try {
       const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/auth/change-password", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
+          userId: user?.id,
           currentPassword,
           newPassword,
         }),
@@ -46,159 +67,231 @@ export default function Profile() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Password update failed.");
 
-      setStatusMessage({ text: data.message, isError: false });
+      setPassMsg({ text: data.message || "Password changed successfully! 🔒", type: "success" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setStatusMessage({ text: err.message, isError: true });
+      setPassMsg({ text: err.message, type: "error" });
     } finally {
-      setLoading(false);
+      setLoadingPass(false);
     }
   }
 
   const styles = {
     container: {
-      padding: "32px",
-      maxWidth: "850px",
+      padding: "28px 36px",
+      maxWidth: "960px",
       margin: "0 auto",
       fontFamily: "'Inter', system-ui, sans-serif",
       color: "#0f172a",
     },
-    card: {
+    headerCard: {
+      backgroundColor: "#1e293b",
+      color: "#ffffff",
+      borderRadius: "16px",
+      padding: "24px 30px",
+      display: "flex",
+      alignItems: "center",
+      gap: "20px",
+      marginBottom: "24px",
+      boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.15)",
+    },
+    avatar: {
+      width: "72px",
+      height: "72px",
+      borderRadius: "50%",
+      backgroundColor: "#3b82f6",
+      color: "#ffffff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "28px",
+      fontWeight: "800",
+    },
+    cardSection: {
       backgroundColor: "#ffffff",
       borderRadius: "16px",
-      padding: "28px",
+      padding: "24px",
       border: "1px solid #e2e8f0",
       marginBottom: "24px",
-      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
     },
-    badge: (isTeacher) => ({
-      display: "inline-block",
-      backgroundColor: isTeacher ? "#fef3c7" : "#eff6ff",
-      color: isTeacher ? "#b45309" : "#1d4ed8",
-      padding: "4px 12px",
-      borderRadius: "999px",
+    metaRow: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+      gap: "16px",
+      marginTop: "16px",
+    },
+    metaBox: {
+      backgroundColor: "#f8fafc",
+      padding: "12px 16px",
+      borderRadius: "10px",
+      border: "1px solid #e2e8f0",
+    },
+    label: {
       fontSize: "12px",
+      color: "#64748b",
+      fontWeight: "600",
+      marginBottom: "4px",
+    },
+    value: {
+      fontSize: "14px",
       fontWeight: "700",
-      marginBottom: "12px",
-      border: isTeacher ? "1px solid #fde68a" : "1px solid #bfdbfe",
-    }),
-    inputGroup: {
-      marginBottom: "16px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
+      color: "#0f172a",
     },
     input: {
-      padding: "10px 14px",
+      width: "100%",
+      padding: "10px",
       borderRadius: "8px",
       border: "1px solid #cbd5e1",
       fontSize: "14px",
       outline: "none",
+      boxSizing: "border-box",
     },
-    submitBtn: {
-      backgroundColor: "#2563eb",
-      color: "#fff",
-      border: "none",
+    btn: {
       padding: "10px 20px",
       borderRadius: "8px",
+      border: "none",
+      backgroundColor: "#2563eb",
+      color: "#fff",
       fontWeight: "700",
       cursor: "pointer",
+      fontSize: "14px",
     },
   };
 
-  if (!user) return <div style={styles.container}>Loading user details...</div>;
-
-  const isTeacher = user.role === "teacher";
+  const isTeacher = user?.role === "teacher";
 
   return (
     <div style={styles.container}>
-      <h1 style={{ fontSize: "24px", fontWeight: "800", marginBottom: "6px" }}>Account Settings</h1>
-      <p style={{ color: "#64748b", margin: "0 0 24px 0", fontSize: "14px" }}>
-        CampusHub Polytechnic User Directory Profile & Credentials
-      </p>
-
-      {/* Profile Overview Card */}
-      <div style={styles.card}>
-        <span style={styles.badge(isTeacher)}>
-          {isTeacher ? "👨‍🏫 Faculty Member / Teacher" : "🎓 Polytechnic Student"}
-        </span>
-        <h2 style={{ margin: "0 0 4px 0", fontSize: "20px" }}>{user.name}</h2>
-        <p style={{ color: "#64748b", margin: "0 0 16px 0", fontSize: "14px" }}>{user.email}</p>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", backgroundColor: "#f8fafc", padding: "16px", borderRadius: "10px" }}>
-          <div>
-            <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>Department / Course</span>
-            <strong style={{ fontSize: "14px" }}>{user.course || "Computer Science"}</strong>
+      {/* Top Banner */}
+      <div style={styles.headerCard}>
+        <div style={styles.avatar}>
+          {user?.name ? user.name[0].toUpperCase() : "U"}
+        </div>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+            <h1 style={{ fontSize: "22px", fontWeight: "800", margin: 0 }}>
+              {user?.name || "Campus User"}
+            </h1>
+            <span
+              style={{
+                backgroundColor: isTeacher ? "#f59e0b" : "#2563eb",
+                color: "#ffffff",
+                fontSize: "11px",
+                fontWeight: "700",
+                padding: "3px 8px",
+                borderRadius: "999px",
+              }}
+            >
+              {isTeacher ? "👨‍🏫 Faculty Administrator" : "🎓 Student"}
+            </span>
           </div>
-          <div>
-            <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>Academic Year</span>
-            <strong style={{ fontSize: "14px" }}>2026-27 (Kalaburagi)</strong>
+          <p style={{ margin: 0, fontSize: "14px", color: "#94a3b8" }}>
+            {user?.email || "user@campushub.edu"}
+          </p>
+        </div>
+      </div>
+
+      {/* Academic Identity Details */}
+      <div style={styles.cardSection}>
+        <h2 style={{ fontSize: "17px", fontWeight: "700", margin: "0 0 4px 0" }}>
+          Academic Profile
+        </h2>
+        <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+          Department of Computer Science & Engineering • Kalaburagi Polytechnic
+        </p>
+
+        <div style={styles.metaRow}>
+          <div style={styles.metaBox}>
+            <div style={styles.label}>Enrollment Course</div>
+            <div style={styles.value}>{user?.course || "Diploma CS"}</div>
+          </div>
+          <div style={styles.metaBox}>
+            <div style={styles.label}>Academic Semester</div>
+            <div style={styles.value}>{user?.semester || "5th Sem"}</div>
+          </div>
+          <div style={styles.metaBox}>
+            <div style={styles.label}>Campus ID</div>
+            <div style={styles.value}>#{user?.id || 1}</div>
+          </div>
+          <div style={styles.metaBox}>
+            <div style={styles.label}>My Lab Submissions</div>
+            <div style={{ ...styles.value, color: "#16a34a" }}>{submissionsCount} Work Files</div>
           </div>
         </div>
       </div>
 
-      {/* Security Card: Change Password */}
-      <div style={styles.card}>
-        <h3 style={{ fontSize: "17px", fontWeight: "700", margin: "0 0 16px 0" }}>Update Security Password</h3>
+      {/* Change Password / Security Box */}
+      <div style={styles.cardSection}>
+        <h2 style={{ fontSize: "17px", fontWeight: "700", margin: "0 0 4px 0" }}>
+          Security & Password Update
+        </h2>
+        <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 16px 0" }}>
+          Keep your CampusHub account secure with a strong password.
+        </p>
 
-        {statusMessage.text && (
-          <div
+        {passMsg.text && (
+          <p
             style={{
-              padding: "12px",
+              padding: "10px",
               borderRadius: "8px",
-              marginBottom: "16px",
               fontSize: "13px",
               fontWeight: "600",
-              backgroundColor: statusMessage.isError ? "#fee2e2" : "#f0fdf4",
-              color: statusMessage.isError ? "#dc2626" : "#16a34a",
-              border: statusMessage.isError ? "1px solid #fca5a5" : "1px solid #86efac",
+              margin: "0 0 14px 0",
+              backgroundColor: passMsg.type === "success" ? "#ecfdf5" : "#fee2e2",
+              color: passMsg.type === "success" ? "#059669" : "#dc2626",
             }}
           >
-            {statusMessage.text}
-          </div>
+            {passMsg.text}
+          </p>
         )}
 
-        <form onSubmit={handlePasswordChange}>
-          <div style={styles.inputGroup}>
-            <label style={{ fontSize: "13px", fontWeight: "600" }}>Current Password</label>
+        <form onSubmit={handleChangePassword} style={{ maxWidth: "420px" }}>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
+              Current Password
+            </label>
             <input
               type="password"
               required
-              placeholder="Enter your existing password"
-              style={styles.input}
+              placeholder="Enter your current password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
+              style={styles.input}
             />
           </div>
 
-          <div style={styles.inputGroup}>
-            <label style={{ fontSize: "13px", fontWeight: "600" }}>New Password</label>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
+              New Password
+            </label>
             <input
               type="password"
               required
               placeholder="Minimum 6 characters"
-              style={styles.input}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              style={styles.input}
             />
           </div>
 
-          <div style={styles.inputGroup}>
-            <label style={{ fontSize: "13px", fontWeight: "600" }}>Confirm New Password</label>
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
+              Confirm New Password
+            </label>
             <input
               type="password"
               required
-              placeholder="Confirm new password"
-              style={styles.input}
+              placeholder="Repeat new password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              style={styles.input}
             />
           </div>
 
-          <button type="submit" disabled={loading} style={styles.submitBtn}>
-            {loading ? "Saving..." : "Change Password"}
+          <button type="submit" disabled={loadingPass} style={styles.btn}>
+            {loadingPass ? "Updating..." : "Update Password"}
           </button>
         </form>
       </div>
