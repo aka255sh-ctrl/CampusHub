@@ -1,40 +1,61 @@
 import { useEffect, useState } from "react";
+import PdfPreviewModal from "../components/PdfPreviewModal";
 
 const PAPERS_API = "https://campushub-backend-6rtk.onrender.com/api/question-papers";
 
 export default function QuestionPapers() {
+  const [previewFile, setPreviewFile] = useState(null);
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Upload modal state
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
-  const [semester, setSemester] = useState("5th Semester");
-  const [year, setYear] = useState("2024");
+  const [semester, setSemester] = useState("1st Semester");
+  const [year, setYear] = useState("2026");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
 
+  const semesterTabs = [
+    "All",
+    "1st Semester",
+    "2nd Semester",
+    "3rd Semester",
+    "4th Semester",
+    "5th Semester",
+    "6th Semester",
+  ];
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (err) {}
+    }
+  }, []);
+
   useEffect(() => {
     fetchPapers();
-  }, [selectedSemester, selectedYear]);
+  }, [selectedSemester]);
 
   async function fetchPapers() {
     setLoading(true);
     setError("");
 
     try {
-      let queryParams = [];
-      if (selectedSemester) queryParams.push(`semester=${encodeURIComponent(selectedSemester)}`);
-      if (selectedYear) queryParams.push(`year=${encodeURIComponent(selectedYear)}`);
+      let url = PAPERS_API;
+      if (selectedSemester && selectedSemester !== "All") {
+        url += `?semester=${encodeURIComponent(selectedSemester)}`;
+      }
 
-      const queryString = queryParams.length ? `?${queryParams.join("&")}` : "";
-      const response = await fetch(`${PAPERS_API}${queryString}`);
+      const response = await fetch(url);
       const data = await response.json();
 
       if (!response.ok) {
@@ -53,7 +74,7 @@ export default function QuestionPapers() {
     e.preventDefault();
 
     if (!file) {
-      setUploadMessage("Please select a file.");
+      setUploadMessage("Please select a question paper file.");
       return;
     }
 
@@ -66,6 +87,9 @@ export default function QuestionPapers() {
     formData.append("semester", semester);
     formData.append("year", year);
     formData.append("pdfFile", file);
+    if (currentUser?.id) {
+      formData.append("userId", currentUser.id);
+    }
 
     try {
       const response = await fetch(`${PAPERS_API}/upload`, {
@@ -82,8 +106,8 @@ export default function QuestionPapers() {
       setUploadMessage("Question Paper uploaded successfully!");
       setTitle("");
       setSubject("");
-      setSemester("5th Semester");
-      setYear("2024");
+      setSemester("1st Semester");
+      setYear("2026");
       setFile(null);
 
       fetchPapers();
@@ -93,23 +117,44 @@ export default function QuestionPapers() {
         setUploadMessage("");
       }, 1200);
     } catch (err) {
-      setUploadMessage(err.message || "Upload failed.");
+      setUploadMessage(err.message || "Something went wrong.");
     } finally {
       setUploading(false);
     }
   }
 
+  async function handleDeletePaper(id) {
+    if (!window.confirm("Are you sure you want to delete this question paper?")) return;
+
+    try {
+      const res = await fetch(`${PAPERS_API}/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete question paper.");
+      }
+
+      setPapers((prev) => prev.filter((paper) => paper.id !== id));
+    } catch (err) {
+      alert(err.message || "Could not delete question paper.");
+    }
+  }
+
   const filteredPapers = papers.filter((paper) => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
     const titleMatch = paper.title?.toLowerCase().includes(term);
     const subjectMatch = paper.subject?.toLowerCase().includes(term);
-    return titleMatch || subjectMatch;
+    const semMatch = paper.semester?.toLowerCase().includes(term);
+    const yearMatch = String(paper.year || "").includes(term);
+    return titleMatch || subjectMatch || semMatch || yearMatch;
   });
 
   const styles = {
     container: {
-      padding: "28px 36px",
-      maxWidth: "1280px",
+      padding: "24px 32px",
+      maxWidth: "1200px",
       margin: "0 auto",
       fontFamily: "'Inter', system-ui, sans-serif",
       color: "#0f172a",
@@ -143,34 +188,66 @@ export default function QuestionPapers() {
       cursor: "pointer",
       fontSize: "14px",
     },
-    filterBar: {
+    searchSection: {
+      backgroundColor: "#ffffff",
+      borderRadius: "14px",
+      padding: "18px 20px",
+      border: "1px solid #e2e8f0",
+      marginBottom: "24px",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+    },
+    searchRow: {
       display: "flex",
       gap: "12px",
-      marginBottom: "24px",
-      flexWrap: "wrap",
+      alignItems: "center",
+      position: "relative",
     },
     searchInput: {
-      flex: "1",
-      minWidth: "220px",
-      padding: "10px 14px",
-      borderRadius: "8px",
+      flex: 1,
+      padding: "12px 16px",
+      borderRadius: "10px",
       border: "1px solid #cbd5e1",
       fontSize: "14px",
       outline: "none",
-      backgroundColor: "#fff",
+      backgroundColor: "#f8fafc",
     },
-    select: {
-      padding: "10px 14px",
-      borderRadius: "8px",
-      border: "1px solid #cbd5e1",
-      fontSize: "14px",
-      background: "#fff",
+    clearBtn: {
+      position: "absolute",
+      right: "12px",
+      background: "none",
+      border: "none",
+      color: "#94a3b8",
+      fontSize: "16px",
       cursor: "pointer",
-      outline: "none",
+    },
+    pillsRow: {
+      display: "flex",
+      gap: "8px",
+      marginTop: "14px",
+      flexWrap: "wrap",
+      alignItems: "center",
+    },
+    tabPill: (active) => ({
+      padding: "6px 14px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: "600",
+      border: active ? "1px solid #2563eb" : "1px solid #e2e8f0",
+      backgroundColor: active ? "#eff6ff" : "#ffffff",
+      color: active ? "#2563eb" : "#475569",
+      cursor: "pointer",
+    }),
+    resultsMeta: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "16px",
+      fontSize: "13px",
+      color: "#64748b",
     },
     grid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
       gap: "20px",
     },
     card: {
@@ -183,48 +260,54 @@ export default function QuestionPapers() {
       flexDirection: "column",
       justifyContent: "space-between",
     },
-    badgeRow: {
+    cardBadge: {
+      background: "#fef3c7",
+      color: "#b45309",
+      fontSize: "12px",
+      fontWeight: "600",
+      padding: "4px 8px",
+      borderRadius: "6px",
+    },
+    cardActions: {
       display: "flex",
       gap: "8px",
-      marginBottom: "12px",
+      marginTop: "14px",
+      alignItems: "center",
     },
-    cardBadge: {
-      background: "#eff6ff",
-      color: "#2563eb",
-      fontSize: "12px",
-      fontWeight: "600",
-      padding: "4px 8px",
-      borderRadius: "6px",
-    },
-    yearBadge: {
-      background: "#fef3c7",
-      color: "#d97706",
-      fontSize: "12px",
-      fontWeight: "600",
-      padding: "4px 8px",
-      borderRadius: "6px",
-    },
-    cardTitle: {
-      fontSize: "17px",
-      fontWeight: "700",
-      margin: "0 0 6px 0",
-      color: "#1e293b",
-    },
-    cardSubject: {
-      fontSize: "13px",
-      color: "#64748b",
-      margin: "0 0 18px 0",
-    },
-    downloadBtn: {
-      display: "inline-block",
+    previewBtn: {
+      flex: 1,
       textAlign: "center",
-      textDecoration: "none",
-      background: "#0f172a",
+      background: "#3b82f6",
       color: "#ffffff",
       padding: "10px",
       borderRadius: "8px",
       fontSize: "13px",
       fontWeight: "600",
+      border: "none",
+      cursor: "pointer",
+    },
+    downloadBtn: {
+      padding: "10px 14px",
+      backgroundColor: "#f1f5f9",
+      color: "#334155",
+      borderRadius: "8px",
+      textDecoration: "none",
+      fontWeight: "600",
+      fontSize: "13px",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "1px solid #cbd5e1",
+    },
+    deleteBtn: {
+      background: "#fee2e2",
+      color: "#dc2626",
+      border: "none",
+      padding: "10px 14px",
+      borderRadius: "8px",
+      fontSize: "13px",
+      fontWeight: "700",
+      cursor: "pointer",
     },
     modalOverlay: {
       position: "fixed",
@@ -253,23 +336,12 @@ export default function QuestionPapers() {
       flexDirection: "column",
       gap: "6px",
     },
-    label: {
-      fontSize: "13px",
-      fontWeight: "600",
-      color: "#334155",
-    },
     input: {
       padding: "10px",
       borderRadius: "8px",
       border: "1px solid #cbd5e1",
       fontSize: "14px",
       outline: "none",
-    },
-    modalActions: {
-      display: "flex",
-      justifyContent: "flex-end",
-      gap: "10px",
-      marginTop: "20px",
     },
     cancelBtn: {
       padding: "8px 16px",
@@ -292,11 +364,19 @@ export default function QuestionPapers() {
 
   return (
     <div style={styles.container}>
+      {previewFile && (
+        <PdfPreviewModal
+          fileUrl={previewFile.url}
+          title={previewFile.title}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
+
       <div style={styles.headerWrapper}>
         <div>
           <h1 style={styles.title}>Question Papers</h1>
           <p style={styles.subtitle}>
-            Access and download previous years' university and mid-term exam papers.
+            Explore and download previous years' mid-term and end-term question papers.
           </p>
         </div>
         <button style={styles.uploadBtn} onClick={() => setShowModal(true)}>
@@ -304,68 +384,137 @@ export default function QuestionPapers() {
         </button>
       </div>
 
-      <div style={styles.filterBar}>
-        <input
-          type="text"
-          placeholder="Search by subject or paper title..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={styles.searchInput}
-        />
+      {/* Search & Semester Tabs */}
+      <div style={styles.searchSection}>
+        <div style={styles.searchRow}>
+          <input
+            type="text"
+            placeholder="Search papers by subject, year (e.g. 2024, 2025), or title..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+          {searchTerm && (
+            <button
+              style={styles.clearBtn}
+              onClick={() => setSearchTerm("")}
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
-        <select
-          value={selectedSemester}
-          onChange={(e) => setSelectedSemester(e.target.value)}
-          style={styles.select}
-        >
-          <option value="">All Semesters</option>
-          <option value="1st Semester">1st Semester</option>
-          <option value="2nd Semester">2nd Semester</option>
-          <option value="3rd Semester">3rd Semester</option>
-          <option value="4th Semester">4th Semester</option>
-          <option value="5th Semester">5th Semester</option>
-          <option value="6th Semester">6th Semester</option>
-        </select>
-
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(e.target.value)}
-          style={styles.select}
-        >
-          <option value="">All Years</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-          <option value="2022">2022</option>
-        </select>
+        <div style={styles.pillsRow}>
+          <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+            Semesters:
+          </span>
+          {semesterTabs.map((sem) => {
+            const isSelected =
+              selectedSemester === sem || (!selectedSemester && sem === "All");
+            return (
+              <button
+                key={sem}
+                onClick={() => setSelectedSemester(sem === "All" ? "" : sem)}
+                style={styles.tabPill(isSelected)}
+              >
+                {sem}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {loading && <div>Loading question papers...</div>}
+      <div style={styles.resultsMeta}>
+        <span>
+          Showing <strong>{filteredPapers.length}</strong> of <strong>{papers.length}</strong> question papers
+        </span>
+        {searchTerm && (
+          <span>
+            Filtered by: <em>"{searchTerm}"</em>
+          </span>
+        )}
+      </div>
+
+      {loading && <div>Loading papers...</div>}
       {error && <div style={{ color: "#ef4444", marginBottom: "16px" }}>{error}</div>}
 
       <div style={styles.grid}>
-        {filteredPapers.map((paper) => (
-          <div key={paper.id} style={styles.card}>
-            <div>
-              <div style={styles.badgeRow}>
-                <span style={styles.cardBadge}>{paper.semester}</span>
-                <span style={styles.yearBadge}>{paper.year}</span>
+        {filteredPapers.length > 0 ? (
+          filteredPapers.map((paper) => {
+            const canDelete =
+              Boolean(currentUser) &&
+              (currentUser.id === paper.user_id || currentUser.role === "teacher" || !paper.user_id);
+
+            return (
+              <div key={paper.id} style={styles.card}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                    <span style={styles.cardBadge}>{paper.semester}</span>
+                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>
+                      Year {paper.year || "2026"}
+                    </span>
+                  </div>
+                  <h3 style={{ fontSize: "18px", fontWeight: "700", margin: "0 0 6px 0", color: "#1e293b" }}>
+                    {paper.title}
+                  </h3>
+                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                    Subject: {paper.subject}
+                  </p>
+                </div>
+
+                <div style={styles.cardActions}>
+                  <button
+                    onClick={() => setPreviewFile({ url: paper.file_url, title: paper.title })}
+                    style={styles.previewBtn}
+                  >
+                    👁️ Preview
+                  </button>
+
+                  <a
+                    href={paper.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    style={styles.downloadBtn}
+                    title="Download Paper"
+                  >
+                    ⬇️
+                  </a>
+
+                  {canDelete && (
+                    <button
+                      onClick={() => handleDeletePaper(paper.id)}
+                      style={styles.deleteBtn}
+                      title="Delete Paper"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               </div>
-              <h3 style={styles.cardTitle}>{paper.title}</h3>
-              <p style={styles.cardSubject}>Subject: {paper.subject}</p>
-            </div>
-            <a
-              href={paper.file_url || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.downloadBtn}
+            );
+          })
+        ) : (
+          !loading && (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                textAlign: "center",
+                padding: "40px",
+                backgroundColor: "#fff",
+                borderRadius: "12px",
+                border: "1px dashed #cbd5e1",
+                color: "#64748b",
+              }}
             >
-              View / Download Paper
-            </a>
-          </div>
-        ))}
+              No question papers match your filters.
+            </div>
+          )
+        )}
       </div>
 
+      {/* Upload Modal */}
       {showModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -385,11 +534,11 @@ export default function QuestionPapers() {
 
             <form onSubmit={handleUpload}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Paper Title</label>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>Paper Title</label>
                 <input
                   style={styles.input}
                   type="text"
-                  placeholder="e.g. End Semester Exam 2024"
+                  placeholder="e.g. End Term Board Exam 2025"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
@@ -397,22 +546,22 @@ export default function QuestionPapers() {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>Subject</label>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>Subject</label>
                 <input
                   style={styles.input}
                   type="text"
-                  placeholder="e.g. Operating Systems"
+                  placeholder="e.g. Database Management Systems"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   required
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
-                <div style={{ ...styles.formGroup, flex: 1 }}>
-                  <label style={styles.label}>Semester</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>Semester</label>
                   <select
-                    style={styles.select}
+                    style={{ ...styles.input, width: "100%", boxSizing: "border-box" }}
                     value={semester}
                     onChange={(e) => setSemester(e.target.value)}
                   >
@@ -424,31 +573,30 @@ export default function QuestionPapers() {
                     <option value="6th Semester">6th Semester</option>
                   </select>
                 </div>
-
-                <div style={{ ...styles.formGroup, flex: 1 }}>
-                  <label style={styles.label}>Year</label>
+                <div>
+                  <label style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>Year</label>
                   <input
-                    style={styles.input}
-                    type="text"
+                    style={{ ...styles.input, width: "100%", boxSizing: "border-box" }}
+                    type="number"
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
-                    placeholder="2024"
                     required
                   />
                 </div>
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>Select File (PDF, Image, etc.)</label>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>Select File (PDF, Images)</label>
                 <input
                   style={styles.input}
                   type="file"
+                  accept="image/*,.pdf,.doc,.docx"
                   onChange={(e) => setFile(e.target.files[0])}
                   required
                 />
               </div>
 
-              <div style={styles.modalActions}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
                 <button
                   type="button"
                   style={styles.cancelBtn}
