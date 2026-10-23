@@ -131,6 +131,79 @@ app.delete("/api/live-class", (req, res) => {
 });
 
 // ======================================
+// REMOTE LEARNING: DIGITAL ATTENDANCE API
+// ======================================
+let attendanceWindow = {
+  isOpen: false,
+  subject: "",
+  openedAt: null,
+  expiresAt: null,
+};
+let liveAttendanceRecords = [];
+
+// 1. GET attendance status & records
+app.get("/api/attendance/status", (req, res) => {
+  const now = Date.now();
+  if (attendanceWindow.isOpen && attendanceWindow.expiresAt && now > attendanceWindow.expiresAt) {
+    attendanceWindow.isOpen = false;
+  }
+  res.json({
+    attendanceWindow,
+    totalMarked: liveAttendanceRecords.length,
+    records: liveAttendanceRecords,
+  });
+});
+
+// 2. POST open attendance window (Faculty)
+app.post("/api/attendance/open", (req, res) => {
+  const { subject, durationMinutes } = req.body;
+  const duration = (durationMinutes || 5) * 60 * 1000;
+  const now = Date.now();
+
+  attendanceWindow = {
+    isOpen: true,
+    subject: subject || "Live Session",
+    openedAt: now,
+    expiresAt: now + duration,
+  };
+  liveAttendanceRecords = []; // Reset for new session
+
+  res.json({ message: "Attendance window opened!", attendanceWindow });
+});
+
+// 3. POST mark attendance (Student)
+app.post("/api/attendance/mark", (req, res) => {
+  const { studentId, studentName } = req.body;
+  const now = Date.now();
+
+  if (!attendanceWindow.isOpen || now > attendanceWindow.expiresAt) {
+    return res.status(400).json({ message: "Attendance window is closed." });
+  }
+
+  const alreadyMarked = liveAttendanceRecords.find((r) => r.studentId === studentId);
+  if (alreadyMarked) {
+    return res.status(400).json({ message: "Attendance already marked for this session!" });
+  }
+
+  const record = {
+    studentId,
+    studentName,
+    subject: attendanceWindow.subject,
+    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    date: new Date().toISOString().slice(0, 10),
+  };
+
+  liveAttendanceRecords.push(record);
+  res.json({ message: "Attendance marked successfully! Present ✅", record });
+});
+
+// 4. POST close attendance manually (Faculty)
+app.post("/api/attendance/close", (req, res) => {
+  attendanceWindow.isOpen = false;
+  res.json({ message: "Attendance window closed.", totalPresent: liveAttendanceRecords.length });
+});
+
+// ======================================
 // TEACHER: REGISTERED USERS & DELEGATION LIST
 // ======================================
 app.get("/api/admin/students", (req, res) => {

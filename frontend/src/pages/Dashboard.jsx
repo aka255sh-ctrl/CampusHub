@@ -7,6 +7,12 @@ export default function Dashboard() {
   const [liveClass, setLiveClass] = useState(null);
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [liveForm, setLiveForm] = useState({ subject: "", meetUrl: "", topic: "" });
+  
+  // Remote Learning Attendance States
+  const [attendanceStatus, setAttendanceStatus] = useState({ isOpen: false });
+  const [markedAttendance, setMarkedAttendance] = useState(false);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+
   const [student, setStudent] = useState(null);
   const [isTeacher, setIsTeacher] = useState(false);
   const [isRealTeacher, setIsRealTeacher] = useState(false);
@@ -65,6 +71,15 @@ export default function Dashboard() {
       setLiveClass(liveData.liveClass || null);
     } catch (e) {
       console.error("Live class fetch error:", e);
+    }
+
+    try {
+      const attRes = await fetch("https://campushub-backend-6rtk.onrender.com/api/attendance/status");
+      const attData = await attRes.json();
+      setAttendanceStatus(attData.attendanceWindow || { isOpen: false });
+      setAttendanceRecords(attData.records || []);
+    } catch (e) {
+      console.error("Attendance status load error:", e);
     }
 
     try {
@@ -148,6 +163,61 @@ export default function Dashboard() {
     } catch (err) {
       alert("Failed to end session.");
     }
+  }
+
+  async function handleOpenAttendance() {
+    const subject = prompt("Enter Subject for Attendance session:", liveClass?.subject || "Computer Science");
+    if (!subject) return;
+
+    try {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/attendance/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, durationMinutes: 5 }),
+      });
+      if (res.ok) {
+        alert("Attendance session opened for 5 minutes! 🟢");
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert("Failed to open attendance window.");
+    }
+  }
+
+  async function handleMarkAttendance() {
+    try {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/attendance/mark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: student?.id || 1,
+          studentName: displayName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to mark attendance");
+      setMarkedAttendance(true);
+      alert(data.message);
+      fetchDashboardData();
+    } catch (err) {
+      alert(err.message || "Failed to mark attendance.");
+    }
+  }
+
+  function exportAttendanceCSV() {
+    if (!attendanceRecords.length) return alert("No attendance records to export.");
+    const headers = ["Student ID", "Student Name", "Subject", "Date", "Timestamp", "Status"];
+    const rows = attendanceRecords.map((r) => [r.studentId, `"${r.studentName}"`, `"${r.subject}"`, r.date, r.timestamp, "Present"]);
+    const csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.map((e) => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Attendance_${attendanceStatus.subject || "Session"}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   async function handleDeleteNote(id) {
@@ -474,7 +544,7 @@ export default function Dashboard() {
             border: "2px solid #f87171",
             borderRadius: "14px",
             padding: "16px 22px",
-            marginBottom: "20px",
+            marginBottom: "16px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -546,6 +616,74 @@ export default function Dashboard() {
                 }}
               >
                 End Class ✕
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 Remote Learning: Digital Attendance Active Banner */}
+      {attendanceStatus.isOpen && (
+        <div
+          style={{
+            backgroundColor: "#f0fdf4",
+            border: "2px solid #86efac",
+            borderRadius: "14px",
+            padding: "16px 22px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "14px",
+            boxShadow: "0 4px 12px rgba(22, 163, 74, 0.12)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "28px" }}>🟢</span>
+            <div>
+              <h4 style={{ margin: "0 0 2px 0", color: "#166534", fontSize: "15px", fontWeight: "800" }}>
+                Live Attendance Window Active: {attendanceStatus.subject}
+              </h4>
+              <p style={{ margin: 0, fontSize: "12px", color: "#15803d" }}>
+                Session open for 5 minutes. Total Recorded: <strong>{attendanceRecords.length} Students</strong>
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            {!isTeacher ? (
+              <button
+                onClick={handleMarkAttendance}
+                disabled={markedAttendance}
+                style={{
+                  backgroundColor: markedAttendance ? "#94a3b8" : "#16a34a",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  fontWeight: "800",
+                  fontSize: "13px",
+                  cursor: markedAttendance ? "not-allowed" : "pointer",
+                }}
+              >
+                {markedAttendance ? "✓ Attendance Recorded" : "✋ Mark My Attendance"}
+              </button>
+            ) : (
+              <button
+                onClick={exportAttendanceCSV}
+                style={{
+                  backgroundColor: "#0284c7",
+                  color: "#fff",
+                  border: "none",
+                  padding: "8px 14px",
+                  borderRadius: "8px",
+                  fontWeight: "700",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+              >
+                📥 Download Attendance Sheet
               </button>
             )}
           </div>
@@ -673,14 +811,14 @@ export default function Dashboard() {
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
           {isRealTeacher && isTeacher ? (
             <>
-              {/* 🔴 Start Live Class Button for Teacher */}
+              {/* 🔴 Start Live Class Button */}
               <button
                 onClick={() => setShowLiveModal(true)}
                 style={{
                   backgroundColor: liveClass ? "#dc2626" : "#ef4444",
                   color: "#fff",
                   border: "none",
-                  padding: "10px 16px",
+                  padding: "10px 14px",
                   borderRadius: "8px",
                   fontWeight: "700",
                   cursor: "pointer",
@@ -693,9 +831,29 @@ export default function Dashboard() {
                 <span>🔴</span> {liveClass ? "Manage Live Class" : "+ Start Live Class"}
               </button>
 
+              {/* 📋 Open Attendance Button */}
+              <button
+                onClick={handleOpenAttendance}
+                style={{
+                  backgroundColor: attendanceStatus.isOpen ? "#15803d" : "#16a34a",
+                  color: "#fff",
+                  border: "none",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>📋</span> {attendanceStatus.isOpen ? `Attendance (${attendanceRecords.length})` : "Take Attendance"}
+              </button>
+
               <button
                 onClick={() => setShowNoticeModal(true)}
-                style={{ backgroundColor: "#16a34a", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}
+                style={{ backgroundColor: "#0284c7", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}
               >
                 + Post Notice
               </button>
