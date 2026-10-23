@@ -2,17 +2,20 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
   if (!fileUrl) return null;
 
   const BACKEND_BASE = "https://campushub-backend-6rtk.onrender.com";
-  const fullUrl = fileUrl.startsWith("http")
+  let fullUrl = fileUrl.startsWith("http")
     ? fileUrl
     : `${BACKEND_BASE}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
+
+  // Cloudinary PDF ke inline view ke liye /fl_attachment/ remove ya replace karna zaroori hai
+  if (fullUrl.includes("cloudinary.com") && fullUrl.includes("/fl_attachment")) {
+    fullUrl = fullUrl.replace("/fl_attachment", "");
+  }
 
   const isCsvOrExcel = fullUrl.match(/\.(csv|xlsx?|tsv)$/i);
   const isImage = fullUrl.match(/\.(jpe?g|png|gif|webp|svg)$/i);
 
-  // Cloudinary / External PDF preview fix for mobile browsers:
-  // Mobile browsers iframe me direct PDF download kar dete hain, isliye Google Docs Viewer use karte hain
-  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
-  const viewerUrl = isMobile && !isImage && !isCsvOrExcel
+  // Sabhi devices ke liye Google Viewer use karenge taaki browser auto-download na kare
+  const viewerUrl = !isImage && !isCsvOrExcel
     ? `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true`
     : fullUrl;
 
@@ -30,7 +33,7 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
         alignItems: "center",
         justifyContent: "center",
         zIndex: 2000,
-        padding: "12px",
+        padding: "16px",
       }}
       onClick={onClose}
     >
@@ -39,8 +42,8 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
           backgroundColor: "#ffffff",
           borderRadius: "16px",
           width: "100%",
-          maxWidth: "920px",
-          height: "90vh",
+          maxWidth: "960px",
+          height: "88vh",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
@@ -149,7 +152,7 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
               <span style={{ fontSize: "42px", marginBottom: "10px" }}>📊</span>
               <h4 style={{ margin: "0 0 6px 0", fontSize: "16px" }}>Spreadsheet / CSV File</h4>
               <p style={{ margin: "0 0 16px 0", color: "#94a3b8", maxWidth: "400px", fontSize: "12px" }}>
-                Direct browser inline preview is not supported for raw spreadsheet files. Click below to download and view.
+                Direct browser preview is not supported for raw spreadsheet files. Click below to download.
               </p>
               <a
                 href={fullUrl}
