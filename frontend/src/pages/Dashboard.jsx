@@ -1,9 +1,12 @@
-import {useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import FileDropzone from "../components/FileDropzone";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
 export default function Dashboard() {
+  const [liveClass, setLiveClass] = useState(null);
+  const [showLiveModal, setShowLiveModal] = useState(false);
+  const [liveForm, setLiveForm] = useState({ subject: "", meetUrl: "", topic: "" });
   const [student, setStudent] = useState(null);
   const [isTeacher, setIsTeacher] = useState(false);
   const [isRealTeacher, setIsRealTeacher] = useState(false);
@@ -55,6 +58,15 @@ export default function Dashboard() {
 
   async function fetchDashboardData() {
     setLoading(true);
+
+    try {
+      const liveRes = await fetch("https://campushub-backend-6rtk.onrender.com/api/live-class");
+      const liveData = await liveRes.json();
+      setLiveClass(liveData.liveClass || null);
+    } catch (e) {
+      console.error("Live class fetch error:", e);
+    }
+
     try {
       const [notesRes, papersRes, noticesRes, studentsRes, subsRes] = await Promise.all([
         fetch("https://campushub-backend-6rtk.onrender.com/api/notes"),
@@ -101,6 +113,41 @@ export default function Dashboard() {
       return { label: "🔬 Lab Review", bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" };
     }
     return { label: tag || "Academic", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
+  }
+
+  async function handleStartLiveClass(e) {
+    e.preventDefault();
+    if (!liveForm.meetUrl.trim()) return alert("Please enter Google Meet / Zoom link!");
+
+    try {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/live-class", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...liveForm,
+          teacherName: displayName,
+        }),
+      });
+      if (res.ok) {
+        setShowLiveModal(false);
+        setLiveForm({ subject: "", meetUrl: "", topic: "" });
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert("Failed to start live class.");
+    }
+  }
+
+  async function handleEndLiveClass() {
+    if (!window.confirm("Do you want to end this live session for all students?")) return;
+    try {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/live-class", {
+        method: "DELETE",
+      });
+      if (res.ok) fetchDashboardData();
+    } catch (err) {
+      alert("Failed to end session.");
+    }
   }
 
   async function handleDeleteNote(id) {
@@ -394,7 +441,6 @@ export default function Dashboard() {
     ? Math.round((gradedSubs.length / studentMySubmissions.length) * 100)
     : 0;
 
-  // Numerical average calculation (extracting numerator from formats like 18/20, 9/10, etc.)
   let marksSum = 0;
   let marksMax = 0;
   gradedSubs.forEach((s) => {
@@ -418,6 +464,92 @@ export default function Dashboard() {
           title={previewFile.title}
           onClose={() => setPreviewFile(null)}
         />
+      )}
+
+      {/* 🔴 Remote Learning: Live Lecture Alert Banner */}
+      {liveClass && (
+        <div
+          style={{
+            backgroundColor: "#fef2f2",
+            border: "2px solid #f87171",
+            borderRadius: "14px",
+            padding: "16px 22px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "14px",
+            boxShadow: "0 4px 12px rgba(239, 68, 68, 0.12)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <div
+              style={{
+                width: "14px",
+                height: "14px",
+                borderRadius: "50%",
+                backgroundColor: "#ef4444",
+                boxShadow: "0 0 0 4px rgba(239, 68, 68, 0.25)",
+              }}
+            />
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "800", backgroundColor: "#dc2626", color: "#fff", padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase" }}>
+                  LIVE CLASS NOW
+                </span>
+                <span style={{ fontSize: "12px", color: "#7f1d1d", fontWeight: "600" }}>
+                  Active Remote Session
+                </span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "800", color: "#991b1b" }}>
+                {liveClass.subject}: <span style={{ fontWeight: "600" }}>{liveClass.topic}</span>
+              </h3>
+              <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#b91c1c" }}>
+                Conducted by <strong>{liveClass.teacherName}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <a
+              href={liveClass.meetUrl.startsWith("http") ? liveClass.meetUrl : `https://${liveClass.meetUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: "#dc2626",
+                color: "#ffffff",
+                textDecoration: "none",
+                padding: "10px 18px",
+                borderRadius: "8px",
+                fontWeight: "800",
+                fontSize: "13px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              Join Lecture Now ↗
+            </a>
+            {isRealTeacher && isTeacher && (
+              <button
+                onClick={handleEndLiveClass}
+                style={{
+                  backgroundColor: "#fff",
+                  color: "#dc2626",
+                  border: "1px solid #fca5a5",
+                  padding: "9px 14px",
+                  borderRadius: "8px",
+                  fontWeight: "700",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+              >
+                End Class ✕
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Dynamic Urgent Announcement / Exam Marquee Ticker */}
@@ -528,10 +660,8 @@ export default function Dashboard() {
 
           <h1 style={{ fontSize: "24px", fontWeight: "800", margin: "0 0 6px 0" }}>
             {isRealTeacher && isTeacher
-            ? `Faculty Administration Control — ${displayName.startsWith("Prof.") ? displayName : `Prof. ${displayName}`}`
-            : "Student Academic Portal 2026-27 — Kalaburagi, Karnataka"}
-
-
+              ? `Faculty Administration Control — ${displayName.startsWith("Prof.") ? displayName : `Prof. ${displayName}`}`
+              : "Student Academic Portal 2026-27 — Kalaburagi, Karnataka"}
           </h1>
           <p style={{ margin: 0, fontSize: "14px", color: "#94a3b8" }}>
             {isRealTeacher && isTeacher
@@ -540,18 +670,40 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
           {isRealTeacher && isTeacher ? (
-            <button
-              onClick={() => setShowNoticeModal(true)}
-              style={{ backgroundColor: "#16a34a", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
-            >
-              + Post Notice
-            </button>
+            <>
+              {/* 🔴 Start Live Class Button for Teacher */}
+              <button
+                onClick={() => setShowLiveModal(true)}
+                style={{
+                  backgroundColor: liveClass ? "#dc2626" : "#ef4444",
+                  color: "#fff",
+                  border: "none",
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "13px",
+                }}
+              >
+                <span>🔴</span> {liveClass ? "Manage Live Class" : "+ Start Live Class"}
+              </button>
+
+              <button
+                onClick={() => setShowNoticeModal(true)}
+                style={{ backgroundColor: "#16a34a", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}
+              >
+                + Post Notice
+              </button>
+            </>
           ) : (
             <button
               onClick={() => setShowSubmitModal(true)}
-              style={{ backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+              style={{ backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}
             >
               📤 Submit Assignment
             </button>
@@ -639,7 +791,6 @@ export default function Dashboard() {
                 {completionPercentage}% ({gradedSubs.length}/{studentMySubmissions.length} Graded)
               </span>
             </div>
-            {/* Visual Progress Bar */}
             <div
               style={{
                 width: "100%",
@@ -1332,6 +1483,60 @@ export default function Dashboard() {
                 </button>
                 <button type="submit" style={{ padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#16a34a", color: "#fff", fontWeight: "700", cursor: "pointer" }}>
                   Publish Notice
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🔴 Start Live Class Modal (Teacher Only) */}
+      {showLiveModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(15,23,42,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200, padding: "16px" }}>
+          <div style={{ backgroundColor: "#fff", borderRadius: "14px", maxWidth: "440px", width: "100%", padding: "24px" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 14px 0", color: "#0f172a" }}>
+              🔴 Broadcast Live Online Class
+            </h2>
+            <form onSubmit={handleStartLiveClass}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Subject Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Full Stack Development"
+                  value={liveForm.subject}
+                  onChange={(e) => setLiveForm({ ...liveForm, subject: e.target.value })}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Lecture Topic</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Unit 4: Node.js Express Middleware"
+                  value={liveForm.topic}
+                  onChange={(e) => setLiveForm({ ...liveForm, topic: e.target.value })}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ marginBottom: "18px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Google Meet / Zoom URL</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="https://meet.google.com/xyz-abcd-efg"
+                  value={liveForm.meetUrl}
+                  onChange={(e) => setLiveForm({ ...liveForm, meetUrl: e.target.value })}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" onClick={() => setShowLiveModal(false)} style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button type="submit" style={{ padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#dc2626", color: "#fff", fontWeight: "700", cursor: "pointer" }}>
+                  Go Live 🔴
                 </button>
               </div>
             </form>
