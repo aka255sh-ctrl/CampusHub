@@ -388,6 +388,28 @@ export default function Dashboard() {
   const studentMySubmissions = submissions.filter((s) => s.student_id === student?.id);
   const latestNotice = notices[0];
 
+  // Marks and Progress calculation
+  const gradedSubs = studentMySubmissions.filter((s) => s.status === "Verified & Approved");
+  const completionPercentage = studentMySubmissions.length > 0
+    ? Math.round((gradedSubs.length / studentMySubmissions.length) * 100)
+    : 0;
+
+  // Numerical average calculation (extracting numerator from formats like 18/20, 9/10, etc.)
+  let marksSum = 0;
+  let marksMax = 0;
+  gradedSubs.forEach((s) => {
+    if (s.marks && s.marks.includes("/")) {
+      const parts = s.marks.split("/");
+      const ob = parseFloat(parts[0]);
+      const tot = parseFloat(parts[1]);
+      if (!isNaN(ob) && !isNaN(tot) && tot > 0) {
+        marksSum += ob;
+        marksMax += tot;
+      }
+    }
+  });
+  const avgScore = marksMax > 0 ? Math.round((marksSum / marksMax) * 100) : null;
+
   return (
     <div style={styles.container}>
       {previewFile && (
@@ -586,6 +608,76 @@ export default function Dashboard() {
           >
             Submit Now →
           </button>
+        </div>
+      )}
+
+      {/* Student Academic Progress Bar Widget */}
+      {!isTeacher && studentMySubmissions.length > 0 && (
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "14px",
+            border: "1px solid #e2e8f0",
+            padding: "18px 24px",
+            marginBottom: "24px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "18px",
+          }}
+        >
+          <div style={{ flex: "1 1 300px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+              <span style={{ fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>
+                🎯 Lab & Assignment Completion Rate
+              </span>
+              <span style={{ fontSize: "13px", fontWeight: "800", color: "#2563eb" }}>
+                {completionPercentage}% ({gradedSubs.length}/{studentMySubmissions.length} Graded)
+              </span>
+            </div>
+            {/* Visual Progress Bar */}
+            <div
+              style={{
+                width: "100%",
+                height: "10px",
+                backgroundColor: "#e2e8f0",
+                borderRadius: "999px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${completionPercentage}%`,
+                  height: "100%",
+                  backgroundColor: completionPercentage === 100 ? "#16a34a" : "#2563eb",
+                  borderRadius: "999px",
+                  transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              />
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              borderLeft: "2px solid #f1f5f9",
+              paddingLeft: "20px",
+            }}
+          >
+            <div>
+              <p style={{ margin: "0 0 2px 0", fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>
+                Evaluated Performance
+              </p>
+              <h4 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: avgScore ? (avgScore >= 75 ? "#16a34a" : "#2563eb") : "#64748b" }}>
+                {avgScore !== null ? `${avgScore}% (Grade A)` : "Evaluating..."}
+              </h4>
+            </div>
+            <span style={{ fontSize: "28px" }}>🎖️</span>
+          </div>
         </div>
       )}
 
