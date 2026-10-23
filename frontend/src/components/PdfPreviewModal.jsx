@@ -1,7 +1,6 @@
 export default function PdfPreviewModal({ fileUrl, title, onClose }) {
   if (!fileUrl) return null;
 
-  // Render backend base URL fix
   const BACKEND_BASE = "https://campushub-backend-6rtk.onrender.com";
   const fullUrl = fileUrl.startsWith("http")
     ? fileUrl
@@ -128,7 +127,7 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
             >
               <span style={{ fontSize: "48px", marginBottom: "12px" }}>📊</span>
               <h4 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Spreadsheet / CSV File</h4>
-              <p style={{ margin: "0 0 20px 0", color: "#94a3b8", maxWidth: "400px", fontSize: "13px" }}>
+              <p style={{ margin: "0 0 20px 0", color: "#94a3b8", maxWidth: "420px", fontSize: "13px" }}>
                 Direct browser inline preview is not supported for raw spreadsheet files. Click below to download and view in Excel or Google Sheets.
               </p>
               <a

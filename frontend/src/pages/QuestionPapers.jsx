@@ -588,11 +588,11 @@ export default function QuestionPapers() {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>Select File (PDF, Images)</label>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>Select File (PDF or Image)</label>
                 <input
                   style={styles.input}
                   type="file"
-                  accept="image/*,.pdf,.doc,.docx"
+                  accept=".pdf,image/png,image/jpeg,image/jpg"
                   onChange={(e) => setFile(e.target.files[0])}
                   required
                 />
