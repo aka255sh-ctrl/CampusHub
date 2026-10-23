@@ -1,8 +1,23 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.setAttribute("data-theme", "dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+      localStorage.setItem("theme", "light");
+    }
+  }, [darkMode]);
 
   const navItems = [
     { name: "Dashboard", path: "/", icon: "📊" },
@@ -68,6 +83,25 @@ export default function Sidebar() {
     footerSection: {
       paddingTop: "16px",
       borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+    },
+    themeToggleBtn: {
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "8px",
+      padding: "10px 14px",
+      borderRadius: "10px",
+      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      color: "#ffffff",
+      border: "1px solid rgba(255, 255, 255, 0.15)",
+      fontSize: "13px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 0.2s ease",
     },
     logoutBtn: {
       width: "100%",
@@ -90,13 +124,13 @@ export default function Sidebar() {
   return (
     <aside style={styles.sidebar}>
       <div>
-        {/* Brand Logo */}
+        {/* Brand Header */}
         <div style={styles.logoSection}>
           <span style={{ fontSize: "24px" }}>🎓</span>
           <h2 style={styles.logoText}>CampusHub</h2>
         </div>
 
-        {/* Navigation Items with Active Indicator */}
+        {/* Navigation Items */}
         <nav style={styles.navGroup}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -126,9 +160,21 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Footer / Logout */}
+      {/* Footer Actions */}
       <div style={styles.footerSection}>
+        {/* Dark/Light Switch */}
         <button
+          type="button"
+          style={styles.themeToggleBtn}
+          onClick={() => setDarkMode(!darkMode)}
+        >
+          <span>{darkMode ? "☀️" : "🌙"}</span>
+          <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
+        </button>
+
+        {/* Logout */}
+        <button
+          type="button"
           style={styles.logoutBtn}
           onClick={handleLogout}
           onMouseEnter={(e) => {
