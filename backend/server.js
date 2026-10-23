@@ -171,20 +171,29 @@ app.get("/api/admin/submissions", (req, res) => {
 });
 
 // ======================================
-// TEACHER: UPDATE SUBMISSION STATUS
+// TEACHER: GRADE & APPROVE SUBMISSION
 // ======================================
 app.put("/api/admin/submissions/:id", (req, res) => {
-  const submissionId = req.params.id;
-  const { status } = req.body;
+  const subId = req.params.id;
+  const { status, marks, feedback } = req.body;
 
-  const sql = "UPDATE student_submissions SET status = ? WHERE id = ?";
-  db.query(sql, [status || "Verified & Approved", submissionId], (err, result) => {
-    if (err) {
-      console.error("Error updating submission status:", err);
-      return res.status(500).json({ message: "Failed to update status." });
+  const sql = `
+    UPDATE student_submissions 
+    SET status = ?, marks = ?, feedback = ? 
+    WHERE id = ?
+  `;
+
+  db.query(
+    sql,
+    [status || "Verified & Approved", marks || null, feedback || null, subId],
+    (err, result) => {
+      if (err) {
+        console.error("Submission grade update error:", err);
+        return res.status(500).json({ message: "Failed to grade submission." });
+      }
+      return res.json({ message: "Assignment graded and approved successfully!" });
     }
-    return res.json({ message: "Submission status updated successfully!" });
-  });
+  );
 });
 
 // ======================================

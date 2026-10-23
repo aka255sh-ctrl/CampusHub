@@ -16,6 +16,11 @@ export default function Dashboard() {
   // PDF Preview Modal
   const [previewFile, setPreviewFile] = useState(null);
 
+  // Grading Modal State
+  const [gradingSub, setGradingSub] = useState(null);
+  const [gradeMarks, setGradeMarks] = useState("");
+  const [gradeFeedback, setGradeFeedback] = useState("");
+
   // Notice Modal (Teacher)
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [noticeForm, setNoticeForm] = useState({
@@ -161,20 +166,31 @@ export default function Dashboard() {
     }
   }
 
-  async function handleUpdateSubmissionStatus(subId) {
-    if (!isRealTeacher) return alert("Unauthorized access!");
+  // Teacher Grading Submission Handler
+  async function handleGradeSubmission(e) {
+    e.preventDefault();
+    if (!gradingSub) return;
+
     try {
-      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/admin/submissions/${subId}`, {
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/admin/submissions/${gradingSub.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Verified & Approved" }),
+        body: JSON.stringify({
+          status: "Verified & Approved",
+          marks: gradeMarks.trim() || "10/10",
+          feedback: gradeFeedback.trim() || "Approved by faculty.",
+        }),
       });
 
-      if (res.ok) {
-        fetchDashboardData();
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to submit evaluation");
+
+      setGradingSub(null);
+      setGradeMarks("");
+      setGradeFeedback("");
+      fetchDashboardData();
     } catch (err) {
-      alert("Could not update submission status.");
+      alert(err.message || "Could not save grade.");
     }
   }
 
@@ -194,6 +210,8 @@ export default function Dashboard() {
       "Role",
       "Latest Assignment Title",
       "Submission Status",
+      "Marks",
+      "Feedback",
     ];
 
     const rows = registeredStudents.map((st) => {
@@ -207,6 +225,8 @@ export default function Dashboard() {
         `"${st.role || "student"}"`,
         `"${sub ? sub.assignment_title : "No submission"}"`,
         `"${sub ? sub.status : "Pending"}"`,
+        `"${sub?.marks || "—"}"`,
+        `"${sub?.feedback || "—"}"`,
       ];
     });
 
@@ -287,7 +307,7 @@ export default function Dashboard() {
       minHeight: "100vh",
     },
     headerCard: {
-      backgroundColor: (isRealTeacher && isTeacher) ? "#0f172a" : "#1e293b",
+      backgroundColor: isRealTeacher && isTeacher ? "#0f172a" : "#1e293b",
       color: "#ffffff",
       borderRadius: "16px",
       padding: "24px 30px",
@@ -326,7 +346,7 @@ export default function Dashboard() {
     },
     mainGrid: {
       display: "grid",
-      gridTemplateColumns: (isRealTeacher && isTeacher) ? "1.2fr 1.2fr" : "1.5fr 1fr",
+      gridTemplateColumns: isRealTeacher && isTeacher ? "1.2fr 1.2fr" : "1.5fr 1fr",
       gap: "24px",
       marginBottom: "28px",
     },
@@ -383,19 +403,19 @@ export default function Dashboard() {
           </div>
 
           <h1 style={{ fontSize: "24px", fontWeight: "800", margin: "0 0 6px 0" }}>
-            {(isRealTeacher && isTeacher)
+            {isRealTeacher && isTeacher
               ? `Faculty Administration Control — Prof. ${displayName}`
               : "Student Academic Portal 2026-27 — Kalaburagi, Karnataka"}
           </h1>
           <p style={{ margin: 0, fontSize: "14px", color: "#94a3b8" }}>
-            {(isRealTeacher && isTeacher)
+            {isRealTeacher && isTeacher
               ? "Access Level: Chief Faculty Controller • Kalaburagi Polytechnic • Full Role Delegation Authority"
               : `Student: ${displayName} • Academic Year 2026-27 • Kalaburagi District`}
           </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
-          {(isRealTeacher && isTeacher) ? (
+          {isRealTeacher && isTeacher ? (
             <button
               onClick={() => setShowNoticeModal(true)}
               style={{ backgroundColor: "#16a34a", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
@@ -536,7 +556,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Teacher View: User Registry + Delegation Management + Submissions Review */}
+      {/* Teacher View: User Registry + Delegation Management + Submissions Evaluation */}
       {isRealTeacher && isTeacher && (
         <div style={{ ...styles.cardSection, marginTop: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
@@ -545,7 +565,7 @@ export default function Dashboard() {
                 🧑‍🎓 Portal Users & Faculty Delegation Management
               </h2>
               <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                Authorize other teachers, manage role privileges, and inspect live lab submissions.
+                Authorize other teachers, evaluate assignments with marks/feedback, and inspect submissions.
               </p>
             </div>
             <div style={{ display: "flex", gap: "10px" }}>
@@ -579,7 +599,7 @@ export default function Dashboard() {
                   <th style={{ padding: "12px" }}>Role Status</th>
                   <th style={{ padding: "12px" }}>Latest Submission</th>
                   <th style={{ padding: "12px" }}>Attached Work</th>
-                  <th style={{ padding: "12px" }}>Submission Action</th>
+                  <th style={{ padding: "12px" }}>Evaluation & Marks</th>
                   <th style={{ padding: "12px" }}>Faculty Delegation</th>
                 </tr>
               </thead>
@@ -634,7 +654,7 @@ export default function Dashboard() {
                       </td>
                       <td style={{ padding: "12px" }}>
                         {studentSub ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                             <span style={{
                               backgroundColor: studentSub.status === "Verified & Approved" ? "#ecfdf5" : "#eff6ff",
                               color: studentSub.status === "Verified & Approved" ? "#059669" : "#2563eb",
@@ -643,26 +663,28 @@ export default function Dashboard() {
                               fontSize: "11px",
                               fontWeight: "700"
                             }}>
-                              {studentSub.status === "Verified & Approved" ? "Approved" : "Submitted"}
+                              {studentSub.status === "Verified & Approved" ? `Graded (${studentSub.marks || "Done"})` : "Submitted"}
                             </span>
 
-                            {studentSub.status !== "Verified & Approved" && (
-                              <button
-                                onClick={() => handleUpdateSubmissionStatus(studentSub.id)}
-                                style={{
-                                  padding: "3px 8px",
-                                  fontSize: "11px",
-                                  backgroundColor: "#16a34a",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "4px",
-                                  cursor: "pointer",
-                                  fontWeight: "700"
-                                }}
-                              >
-                                Approve
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                setGradingSub(studentSub);
+                                setGradeMarks(studentSub.marks || "18/20");
+                                setGradeFeedback(studentSub.feedback || "Good work, approved.");
+                              }}
+                              style={{
+                                padding: "3px 8px",
+                                fontSize: "11px",
+                                backgroundColor: "#2563eb",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontWeight: "700"
+                              }}
+                            >
+                              {studentSub.status === "Verified & Approved" ? "Re-Grade" : "Evaluate"}
+                            </button>
                           </div>
                         ) : (
                           <span style={{ color: "#94a3b8", fontSize: "12px" }}>None</span>
@@ -717,6 +739,65 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Evaluation & Grading Modal (Teacher Only) */}
+      {gradingSub && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(15,23,42,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "16px" }}>
+          <div style={{ backgroundColor: "#fff", borderRadius: "14px", maxWidth: "420px", width: "100%", padding: "24px" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: "700", margin: "0 0 10px 0" }}>
+              Evaluate: {gradingSub.assignment_title}
+            </h2>
+            <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 16px 0" }}>
+              Student: <strong>{gradingSub.student_name}</strong>
+            </p>
+
+            <form onSubmit={handleGradeSubmission}>
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
+                  Marks / Grade
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 18/20 or A+"
+                  value={gradeMarks}
+                  onChange={(e) => setGradeMarks(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "18px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
+                  Faculty Feedback / Remarks
+                </label>
+                <textarea
+                  rows="3"
+                  placeholder="Feedback on lab output, code structure, etc."
+                  value={gradeFeedback}
+                  onChange={(e) => setGradeFeedback(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setGradingSub(null)}
+                  style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#16a34a", color: "#fff", fontWeight: "700", cursor: "pointer" }}
+                >
+                  Save Evaluation
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
