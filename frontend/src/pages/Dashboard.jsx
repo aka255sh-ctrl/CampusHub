@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [isTeacher, setIsTeacher] = useState(false);
-  const [isRealTeacher, setIsRealTeacher] = useState(false); // Database verified teacher check
+  const [isRealTeacher, setIsRealTeacher] = useState(false);
   const [stats, setStats] = useState({ notesCount: 0, papersCount: 0 });
   const [recentUploads, setRecentUploads] = useState([]);
   const [notices, setNotices] = useState([]);
   const [registeredStudents, setRegisteredStudents] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Student click par registered batchmates dekhne ke liye modal
+  const [showStudentsModal, setShowStudentsModal] = useState(false);
 
   // PDF Preview Modal
   const [previewFile, setPreviewFile] = useState(null);
@@ -93,6 +97,14 @@ export default function Dashboard() {
     }
   }
 
+  // Smooth scroll helper
+  function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+
   // Teacher actions (Protected)
   async function handleDeleteNote(id) {
     if (!isRealTeacher) return alert("Unauthorized access!");
@@ -166,7 +178,6 @@ export default function Dashboard() {
     }
   }
 
-  // Teacher Grading Submission Handler
   async function handleGradeSubmission(e) {
     e.preventDefault();
     if (!gradingSub) return;
@@ -194,7 +205,6 @@ export default function Dashboard() {
     }
   }
 
-  // Export to Excel/CSV with UTF-8 BOM encoding & fallback hyphens
   function exportReportToCSV() {
     if (!isRealTeacher) return alert("Unauthorized access!");
     if (!registeredStudents.length) {
@@ -251,7 +261,6 @@ export default function Dashboard() {
     URL.revokeObjectURL(url);
   }
 
-  // Student submission handler
   async function handleStudentSubmit(e) {
     e.preventDefault();
     const currentUserId = student?.id || 1;
@@ -348,6 +357,9 @@ export default function Dashboard() {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
+      cursor: "pointer",
+      transition: "all 0.2s ease-in-out",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
     },
     mainGrid: {
       display: "grid",
@@ -446,42 +458,84 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Metrics Row */}
+      {/* Clickable Metric Tabs Grid */}
       <div style={styles.metricGrid}>
-        <div style={styles.metricCard}>
+        {/* Tab 1: Published Notes -> Navigates to /notes */}
+        <div
+          style={styles.metricCard}
+          onClick={() => navigate("/notes")}
+          title="Click to view all published notes"
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#2563eb")}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+        >
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Published Notes</p>
-            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0 }}>{stats.notesCount}</h3>
-            <p style={{ fontSize: "12px", color: "#16a34a", margin: "4px 0 0 0", fontWeight: "600" }}>Faculty Verified</p>
+            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0, color: "#1e293b" }}>{stats.notesCount}</h3>
+            <p style={{ fontSize: "12px", color: "#16a34a", margin: "4px 0 0 0", fontWeight: "600" }}>Explore Repository →</p>
           </div>
-          <span style={{ fontSize: "26px" }}>📚</span>
+          <span style={{ fontSize: "28px" }}>📚</span>
         </div>
 
-        <div style={styles.metricCard}>
+        {/* Tab 2: Previous Papers -> Navigates to /papers */}
+        <div
+          style={styles.metricCard}
+          onClick={() => navigate("/papers")}
+          title="Click to view previous year question papers"
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#d97706")}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+        >
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Previous Papers</p>
-            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0 }}>{stats.papersCount}</h3>
-            <p style={{ fontSize: "12px", color: "#d97706", margin: "4px 0 0 0", fontWeight: "600" }}>Mid & End Terms</p>
+            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0, color: "#1e293b" }}>{stats.papersCount}</h3>
+            <p style={{ fontSize: "12px", color: "#d97706", margin: "4px 0 0 0", fontWeight: "600" }}>Mid & End Terms →</p>
           </div>
-          <span style={{ fontSize: "26px" }}>📜</span>
+          <span style={{ fontSize: "28px" }}>📜</span>
         </div>
 
-        <div style={styles.metricCard}>
+        {/* Tab 3: Registered Users -> Opens Students Modal (Student) or Scrolls to Delegation (Teacher) */}
+        <div
+          style={styles.metricCard}
+          onClick={() => {
+            if (isRealTeacher && isTeacher) {
+              scrollToSection("users-delegation-section");
+            } else {
+              setShowStudentsModal(true);
+            }
+          }}
+          title={isTeacher ? "Jump to Users Management table" : "View registered batch students"}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#2563eb")}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+        >
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Registered Users</p>
-            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0 }}>{registeredStudents.length}</h3>
-            <p style={{ fontSize: "12px", color: "#2563eb", margin: "4px 0 0 0", fontWeight: "600" }}>Department Portal</p>
+            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0, color: "#1e293b" }}>{registeredStudents.length}</h3>
+            <p style={{ fontSize: "12px", color: "#2563eb", margin: "4px 0 0 0", fontWeight: "600" }}>
+              {isTeacher ? "Manage Users ↓" : "View Batch List →"}
+            </p>
           </div>
-          <span style={{ fontSize: "26px" }}>👥</span>
+          <span style={{ fontSize: "28px" }}>👥</span>
         </div>
 
-        <div style={styles.metricCard}>
+        {/* Tab 4: Live Submissions -> Scrolls to Submissions Section */}
+        <div
+          style={styles.metricCard}
+          onClick={() => {
+            if (isRealTeacher && isTeacher) {
+              scrollToSection("users-delegation-section");
+            } else {
+              scrollToSection("student-submissions-section");
+            }
+          }}
+          title="Click to view submissions & grades"
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#16a34a")}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+        >
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Live Submissions</p>
-            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0 }}>{submissions.length}</h3>
-            <p style={{ fontSize: "12px", color: "#16a34a", margin: "4px 0 0 0", fontWeight: "600" }}>Verified Received</p>
+            <h3 style={{ fontSize: "28px", fontWeight: "800", margin: 0, color: "#1e293b" }}>{submissions.length}</h3>
+            <p style={{ fontSize: "12px", color: "#16a34a", margin: "4px 0 0 0", fontWeight: "600" }}>Check Evaluation ↓</p>
           </div>
-          <span style={{ fontSize: "26px" }}>📋</span>
+          <span style={{ fontSize: "28px" }}>📋</span>
         </div>
       </div>
 
@@ -564,7 +618,7 @@ export default function Dashboard() {
 
       {/* Student View: My Submissions & Academic Grades Tracking Card */}
       {!isTeacher && (
-        <div style={{ ...styles.cardSection, marginTop: "24px" }}>
+        <div id="student-submissions-section" style={{ ...styles.cardSection, marginTop: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <div>
               <h2 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 4px 0", color: "#0f172a" }}>
@@ -647,7 +701,7 @@ export default function Dashboard() {
 
       {/* Teacher View: User Registry + Delegation Management + Submissions Evaluation */}
       {isRealTeacher && isTeacher && (
-        <div style={{ ...styles.cardSection, marginTop: "24px" }}>
+        <div id="users-delegation-section" style={{ ...styles.cardSection, marginTop: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
             <div>
               <h2 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 4px 0", color: "#0f172a" }}>
@@ -780,7 +834,6 @@ export default function Dashboard() {
                         )}
                       </td>
 
-                      {/* Faculty Role Delegation Column */}
                       <td style={{ padding: "12px" }}>
                         {isCurrentTeacher ? (
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -828,6 +881,53 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Student View Modal: Registered Batch Users List */}
+      {showStudentsModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(15,23,42,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "16px" }}>
+          <div style={{ backgroundColor: "#fff", borderRadius: "16px", maxWidth: "560px", width: "100%", padding: "24px", maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div>
+                <h2 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 4px 0", color: "#0f172a" }}>
+                  👥 Department Student Directory
+                </h2>
+                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                  Active students registered in Kalaburagi CSE Department.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowStudentsModal(false)}
+                style={{ background: "none", border: "none", fontSize: "18px", color: "#64748b", cursor: "pointer", fontWeight: "700" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {registeredStudents.map((st) => (
+                <div key={st.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", borderBottom: "1px solid #f1f5f9" }}>
+                  <div>
+                    <p style={{ margin: "0 0 2px 0", fontWeight: "700", color: "#1e293b", fontSize: "14px" }}>{st.name}</p>
+                    <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>{st.email} • {st.course || "Diploma CS"}</p>
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 8px", borderRadius: "999px", backgroundColor: st.role === "teacher" ? "#fef3c7" : "#eff6ff", color: st.role === "teacher" ? "#b45309" : "#2563eb" }}>
+                    {st.role === "teacher" ? "Faculty" : "Student"}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowStudentsModal(false)}
+                style={{ padding: "8px 18px", backgroundColor: "#0f172a", color: "#fff", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "13px", cursor: "pointer" }}
+              >
+                Close Directory
+              </button>
+            </div>
           </div>
         </div>
       )}
