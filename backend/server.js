@@ -15,7 +15,7 @@ const questionPaperRoutes = require("./routes/questionPaperRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }));
 app.use(express.json());
 
 // Static uploads folder fallback (fixes Cannot GET /uploads/...)
@@ -94,6 +94,40 @@ app.delete("/api/notices/:id", (req, res) => {
     if (err) return res.status(500).json({ message: "Error deleting notice" });
     res.json({ message: "Notice deleted successfully" });
   });
+});
+
+// ======================================
+// REMOTE LEARNING / LIVE CLASS BROADCAST API
+// ======================================
+let activeLiveClass = null;
+
+// GET: Current active live class
+app.get("/api/live-class", (req, res) => {
+  res.json({ liveClass: activeLiveClass });
+});
+
+// POST: Teacher launches or updates a live class
+app.post("/api/live-class", (req, res) => {
+  const { subject, teacherName, meetUrl, topic } = req.body;
+  if (!meetUrl) {
+    return res.status(400).json({ message: "Meeting URL is required." });
+  }
+
+  activeLiveClass = {
+    subject: subject || "Online Lecture",
+    teacherName: teacherName || "Faculty Coordinator",
+    meetUrl: meetUrl.trim(),
+    topic: topic || "Regular Syllabus Session",
+    startedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+
+  res.json({ message: "Live Class broadcasted successfully!", liveClass: activeLiveClass });
+});
+
+// DELETE: Teacher ends the live class
+app.delete("/api/live-class", (req, res) => {
+  activeLiveClass = null;
+  res.json({ message: "Live Class session ended." });
 });
 
 // ======================================
@@ -203,6 +237,21 @@ app.put("/api/admin/submissions/:id", (req, res) => {
       return res.json({ message: "Assignment graded and approved successfully!" });
     }
   );
+});
+
+// ======================================
+// TEACHER: DELETE SUBMISSION RECORD
+// ======================================
+app.delete("/api/admin/submissions/:id", (req, res) => {
+  const subId = req.params.id;
+  const sql = "DELETE FROM student_submissions WHERE id = ?";
+  db.query(sql, [subId], (err, result) => {
+    if (err) {
+      console.error("Error deleting submission:", err);
+      return res.status(500).json({ message: "Failed to delete submission record" });
+    }
+    return res.json({ message: "Submission deleted successfully" });
+  });
 });
 
 // ======================================
