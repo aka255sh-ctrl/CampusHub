@@ -4,10 +4,14 @@ import FileDropzone from "../components/FileDropzone";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
 export default function Dashboard() {
+  const [doubts, setDoubts] = useState([]);
+  const [newQuestion, setNewQuestion] = useState("");
+  const [doubtSubject, setDoubtSubject] = useState("Full Stack Development");
+  const [replyTextMap, setReplyTextMap] = useState({});
   const [liveClass, setLiveClass] = useState(null);
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [liveForm, setLiveForm] = useState({ subject: "", meetUrl: "", topic: "" });
-  
+
   // Remote Learning Attendance States
   const [attendanceStatus, setAttendanceStatus] = useState({ isOpen: false });
   const [markedAttendance, setMarkedAttendance] = useState(false);
@@ -64,6 +68,13 @@ export default function Dashboard() {
 
   async function fetchDashboardData() {
     setLoading(true);
+    try {
+      const doubtsRes = await fetch("https://campushub-backend-6rtk.onrender.com/api/doubts");
+      const doubtsData = await doubtsRes.json();
+      setDoubts(doubtsData.doubts || []);
+    } catch (e) {
+      console.error("Doubts load error:", e);
+    }
 
     try {
       const liveRes = await fetch("https://campushub-backend-6rtk.onrender.com/api/live-class");
@@ -218,6 +229,51 @@ export default function Dashboard() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  async function handlePostDoubt(e) {
+    e.preventDefault();
+    if (!newQuestion.trim()) return;
+
+    try {
+      const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/doubts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentName: displayName,
+          subject: doubtSubject,
+          question: newQuestion,
+        }),
+      });
+      if (res.ok) {
+        setNewQuestion("");
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert("Failed to submit question.");
+    }
+  }
+
+  async function handleReplyDoubt(doubtId) {
+    const reply = replyTextMap[doubtId];
+    if (!reply || !reply.trim()) return alert("Please type an answer first.");
+
+    try {
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/doubts/${doubtId}/reply`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reply,
+          repliedBy: displayName,
+        }),
+      });
+      if (res.ok) {
+        setReplyTextMap({ ...replyTextMap, [doubtId]: "" });
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert("Failed to submit reply.");
+    }
   }
 
   async function handleDeleteNote(id) {
@@ -565,7 +621,6 @@ export default function Dashboard() {
   };
 
   const todayClasses = weeklySchedule[currentDayName] || weeklySchedule["Monday"];
-
   const avgScore = marksMax > 0 ? Math.round((marksSum / marksMax) * 100) : null;
 
   return (
@@ -1199,7 +1254,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Remote Learning: Weekly Online Timetable & Today's Schedule */}
+      {/* 📅 Remote Learning: Weekly Online Timetable & Today's Schedule */}
       <div style={{ ...styles.cardSection, marginBottom: "28px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
           <div>
@@ -1275,6 +1330,96 @@ export default function Dashboard() {
                   <span style={{ fontSize: "11px", color: "#16a34a", fontWeight: "700" }}>Scheduled</span>
                 )}
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 💬 Remote Learning: Doubt Clearing & Faculty Discussion Forum */}
+      <div style={{ ...styles.cardSection, marginBottom: "28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <span style={{ fontSize: "18px" }}>💬</span>
+              <h2 style={{ fontSize: "17px", fontWeight: "800", margin: 0, color: "#0f172a" }}>
+                Live Academic Doubt Clearing & Discussion Forum
+              </h2>
+            </div>
+            <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+              Ask syllabus queries remotely and get verified explanations from subject faculty.
+            </p>
+          </div>
+          <span style={{ fontSize: "12px", fontWeight: "700", color: "#16a34a", backgroundColor: "#f0fdf4", padding: "6px 12px", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
+            Total Discussions: {doubts.length}
+          </span>
+        </div>
+
+        {/* Ask Question Bar */}
+        <form onSubmit={handlePostDoubt} style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
+          <select
+            value={doubtSubject}
+            onChange={(e) => setDoubtSubject(e.target.value)}
+            style={{ padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#fff", fontSize: "13px", fontWeight: "600" }}
+          >
+            <option value="Full Stack Development">Full Stack Development</option>
+            <option value="Computer Networks">Computer Networks</option>
+            <option value="Database Systems">Database Systems</option>
+            <option value="Operating Systems">Operating Systems</option>
+          </select>
+          <input
+            type="text"
+            required
+            placeholder="Type your syllabus question or lab doubt here..."
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            style={{ flex: 1, minWidth: "240px", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+          />
+          <button
+            type="submit"
+            style={{ backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}
+          >
+            Ask Query 🚀
+          </button>
+        </form>
+
+        {/* Doubts List */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "380px", overflowY: "auto" }}>
+          {doubts.map((d) => (
+            <div key={d.id} style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "700", color: "#2563eb", backgroundColor: "#eff6ff", padding: "2px 8px", borderRadius: "4px" }}>
+                  {d.subject}
+                </span>
+                <span style={{ fontSize: "11px", color: "#94a3b8" }}>{d.createdAt} • by {d.studentName}</span>
+              </div>
+              <p style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: "600", color: "#1e293b" }}>
+                ❓ {d.question}
+              </p>
+
+              {d.reply ? (
+                <div style={{ backgroundColor: "#ffffff", borderLeft: "3px solid #16a34a", padding: "8px 12px", borderRadius: "6px", marginTop: "8px" }}>
+                  <p style={{ margin: "0 0 2px 0", fontSize: "13px", color: "#166534", fontWeight: "600" }}>
+                    ✓ Answer: {d.reply}
+                  </p>
+                  <span style={{ fontSize: "11px", color: "#64748b" }}>Answered by: <strong>{d.repliedBy}</strong></span>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                  <input
+                    type="text"
+                    placeholder="Type faculty explanation..."
+                    value={replyTextMap[d.id] || ""}
+                    onChange={(e) => setReplyTextMap({ ...replyTextMap, [d.id]: e.target.value })}
+                    style={{ flex: 1, padding: "6px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "12px" }}
+                  />
+                  <button
+                    onClick={() => handleReplyDoubt(d.id)}
+                    style={{ backgroundColor: "#16a34a", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}
+                  >
+                    Reply
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -386,6 +386,65 @@ app.put("/api/auth/change-password", (req, res) => {
   });
 });
 
+// ======================================
+// REMOTE LEARNING: DOUBT CLEARING FORUM API
+// ======================================
+let doubtsList = [
+  {
+    id: 1,
+    studentName: "Akash Kumar",
+    subject: "Full Stack Development",
+    question: "How do we handle Cloudinary buffer stream uploads without saving locally?",
+    reply: "Use upload_stream with a stream.end(buffer) pipeline to pipe memory directly.",
+    repliedBy: "Prof. Faculty Coordinator",
+    createdAt: "10:30 AM",
+  },
+];
+
+// 1. GET all doubts
+app.get("/api/doubts", (req, res) => {
+  res.json({ doubts: doubtsList });
+});
+
+// 2. POST ask a new doubt (Student)
+app.post("/api/doubts", (req, res) => {
+  const { studentName, subject, question } = req.body;
+  if (!question || !question.trim()) {
+    return res.status(400).json({ message: "Question content is required." });
+  }
+
+  const newDoubt = {
+    id: Date.now(),
+    studentName: studentName || "Student",
+    subject: subject || "General Academic",
+    question: question.trim(),
+    reply: null,
+    repliedBy: null,
+    createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+
+  doubtsList.unshift(newDoubt);
+  res.status(201).json({ message: "Doubt posted successfully!", doubt: newDoubt });
+});
+
+// 3. PUT reply to a doubt (Faculty / Peer)
+app.put("/api/doubts/:id/reply", (req, res) => {
+  const doubtId = parseInt(req.params.id);
+  const { reply, repliedBy } = req.body;
+
+  if (!reply || !reply.trim()) {
+    return res.status(400).json({ message: "Reply cannot be empty." });
+  }
+
+  const item = doubtsList.find((d) => d.id === doubtId);
+  if (!item) return res.status(404).json({ message: "Doubt query not found." });
+
+  item.reply = reply.trim();
+  item.repliedBy = repliedBy || "Prof. Faculty Coordinator";
+
+  res.json({ message: "Reply submitted successfully!", doubt: item });
+});
+
 // App listen
 app.listen(PORT, () => {
   console.log(`CampusHub server running on port ${PORT}`);
