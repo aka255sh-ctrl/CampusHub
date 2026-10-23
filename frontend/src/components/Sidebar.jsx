@@ -1,143 +1,149 @@
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  function handleLogout() {
-    localStorage.removeItem("user");
-    navigate("/login");
-  }
-
-  const navLinks = [
+  const navItems = [
     { name: "Dashboard", path: "/", icon: "📊" },
-    { name: "Notes", path: "/notes", icon: "📚" },
+    { name: "Study Notes", path: "/notes", icon: "📁" },
     { name: "Question Papers", path: "/papers", icon: "📝" },
-    { name: "Profile", path: "/profile", icon: "👤" },
+    { name: "My Profile", path: "/profile", icon: "👤" },
   ];
 
+  function handleLogout() {
+    if (window.confirm("Are you sure you want to log out of CampusHub?")) {
+      localStorage.removeItem("user");
+      navigate("/login");
+    }
+  }
+
+  const styles = {
+    sidebar: {
+      width: "250px",
+      minHeight: "100vh",
+      backgroundColor: "#0f172a",
+      color: "#ffffff",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      padding: "24px 16px",
+      boxSizing: "border-box",
+      fontFamily: "'Inter', system-ui, sans-serif",
+    },
+    logoSection: {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "0 10px 24px 10px",
+      borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+      marginBottom: "20px",
+    },
+    logoText: {
+      fontSize: "20px",
+      fontWeight: "800",
+      letterSpacing: "-0.02em",
+      color: "#ffffff",
+      margin: 0,
+    },
+    navGroup: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+    },
+    navLink: (active) => ({
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+      padding: "12px 14px",
+      borderRadius: "10px",
+      fontSize: "14px",
+      fontWeight: active ? "700" : "500",
+      textDecoration: "none",
+      color: active ? "#ffffff" : "#94a3b8",
+      backgroundColor: active ? "#2563eb" : "transparent",
+      boxShadow: active ? "0 4px 12px rgba(37, 99, 235, 0.3)" : "none",
+      transition: "all 0.15s ease-in-out",
+    }),
+    footerSection: {
+      paddingTop: "16px",
+      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+    },
+    logoutBtn: {
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "8px",
+      padding: "12px 14px",
+      borderRadius: "10px",
+      backgroundColor: "rgba(239, 68, 68, 0.12)",
+      color: "#f87171",
+      border: "1px solid rgba(239, 68, 68, 0.2)",
+      fontSize: "14px",
+      fontWeight: "700",
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+    },
+  };
+
   return (
-    <>
-      {/* Mobile Top Bar (Only visible on small screens) */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "12px 18px",
-          backgroundColor: "#0f172a",
-          color: "#ffffff",
-        }}
-        className="mobile-top-bar"
-      >
-        <span style={{ fontWeight: "800", fontSize: "18px" }}>CampusHub</span>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#fff",
-            fontSize: "22px",
-            cursor: "pointer",
-          }}
-        >
-          {isOpen ? "✕" : "☰"}
-        </button>
+    <aside style={styles.sidebar}>
+      <div>
+        {/* Brand Logo */}
+        <div style={styles.logoSection}>
+          <span style={{ fontSize: "24px" }}>🎓</span>
+          <h2 style={styles.logoText}>CampusHub</h2>
+        </div>
+
+        {/* Navigation Items with Active Indicator */}
+        <nav style={styles.navGroup}>
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                style={styles.navLink(isActive)}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                    e.currentTarget.style.color = "#ffffff";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = "#94a3b8";
+                  }
+                }}
+              >
+                <span style={{ fontSize: "16px" }}>{item.icon}</span>
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* Main Sidebar */}
-      <aside
-        style={{
-          width: "250px",
-          backgroundColor: "#0f172a",
-          color: "#ffffff",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "24px 16px",
-          minHeight: "100vh",
-          transition: "transform 0.3s ease",
-        }}
-        className={`main-sidebar ${isOpen ? "open" : ""}`}
-      >
-        <div>
-          <div style={{ padding: "0 12px 28px 12px" }}>
-            <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "800", color: "#38bdf8" }}>
-              CampusHub
-            </h2>
-            <span style={{ fontSize: "11px", color: "#94a3b8" }}>Polytechnic Portal 2026</span>
-          </div>
-
-          <nav style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            {navLinks.map((link) => {
-              const active = location.pathname === link.path;
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "12px 14px",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    fontWeight: active ? "700" : "500",
-                    color: active ? "#ffffff" : "#94a3b8",
-                    backgroundColor: active ? "#1e293b" : "transparent",
-                    textDecoration: "none",
-                  }}
-                >
-                  <span>{link.icon}</span>
-                  <span>{link.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div>
-          <button
-            onClick={handleLogout}
-            style={{
-              width: "100%",
-              padding: "10px",
-              backgroundColor: "#ef4444",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "8px",
-              fontWeight: "700",
-              cursor: "pointer",
-              fontSize: "13px",
-            }}
-          >
-            Logout 🚪
-          </button>
-        </div>
-      </aside>
-
-      {/* Responsive Inline CSS */}
-      <style>{`
-        @media (min-width: 769px) {
-          .mobile-top-bar { display: none !important; }
-        }
-        @media (max-width: 768px) {
-          .main-sidebar {
-            position: fixed;
-            top: 52px;
-            left: 0;
-            bottom: 0;
-            z-index: 999;
-            transform: translateX(-100%);
-          }
-          .main-sidebar.open {
-            transform: translateX(0);
-          }
-        }
-      `}</style>
-    </>
+      {/* Footer / Logout */}
+      <div style={styles.footerSection}>
+        <button
+          style={styles.logoutBtn}
+          onClick={handleLogout}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#ef4444";
+            e.currentTarget.style.color = "#ffffff";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.12)";
+            e.currentTarget.style.color = "#f87171";
+          }}
+        >
+          <span>🚪</span>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </aside>
   );
 }
