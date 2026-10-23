@@ -92,4 +92,24 @@ router.post("/upload", upload.single("pdfFile"), (req, res) => {
   );
 });
 
+// DELETE: Delete a question paper by ID
+router.delete("/:id", (req, res) => {
+  const { id } = req.params;
+
+  const deleteSql = "DELETE FROM question_papers WHERE id = ?";
+
+  db.query(deleteSql, [id], (err, result) => {
+    if (err) {
+      console.error("Error deleting question paper:", err);
+      return res.status(500).json({ message: "Database delete failed." });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Question paper not found." });
+    }
+
+    return res.json({ message: "Question paper deleted successfully!" });
+  });
+});
+
 module.exports = router;

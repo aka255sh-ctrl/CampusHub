@@ -18,6 +18,13 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Static uploads folder fallback (fixes Cannot GET /uploads/...)
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use("/uploads", express.static(uploadsDir));
+
 // 1. Cloudinary Config
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -90,10 +97,9 @@ app.delete("/api/notices/:id", (req, res) => {
 });
 
 // ======================================
-// TEACHER: REGISTERED USERS & DELEGATION LIST (FIXED)
+// TEACHER: REGISTERED USERS & DELEGATION LIST
 // ======================================
 app.get("/api/admin/students", (req, res) => {
-  // role column include kiya gaya hai aur sabhi users fetch honge
   const sql = "SELECT id, name, email, role, course, semester, created_at FROM users ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
@@ -121,7 +127,6 @@ app.post(
         return res.status(400).json({ message: "Student ID and title required" });
       }
 
-      // Multer buffer extract
       const uploadedFile =
         (req.files && (req.files.submissionFile?.[0] || req.files.file?.[0])) || req.file;
 
@@ -129,7 +134,6 @@ app.post(
         return res.status(400).json({ message: "File missing or empty buffer" });
       }
 
-      // Cloudinary stream pipe upload
       const fileUrl = await uploadToCloudinary(
         uploadedFile.buffer,
         uploadedFile.originalname,
@@ -176,7 +180,7 @@ app.get("/api/admin/submissions", (req, res) => {
 });
 
 // ======================================
-// TEACHER: GRADE & APPROVE SUBMISSION (Evaluation with Marks & Feedback)
+// TEACHER: GRADE & APPROVE SUBMISSION
 // ======================================
 app.put("/api/admin/submissions/:id", (req, res) => {
   const subId = req.params.id;
