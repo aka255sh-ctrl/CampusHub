@@ -1,6 +1,6 @@
-import FileDropzone from "../components/FileDropzone";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import FileDropzone from "../components/FileDropzone";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
 export default function Dashboard() {
@@ -87,6 +87,21 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Dynamic badge resolver for notices
+  function getNoticeBadge(tag, title = "") {
+    const text = (tag + " " + title).toLowerCase();
+    if (text.includes("deadline") || text.includes("due") || text.includes("urgent")) {
+      return { label: "⚠️ Urgent Deadline", bg: "#fef2f2", color: "#dc2626", border: "#fecaca" };
+    }
+    if (text.includes("exam") || text.includes("test") || text.includes("mid")) {
+      return { label: "🔥 Exam Cell", bg: "#fffbeb", color: "#d97706", border: "#fde68a" };
+    }
+    if (text.includes("lab")) {
+      return { label: "🔬 Lab Review", bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" };
+    }
+    return { label: tag || "Academic", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
   }
 
   async function handleDeleteNote(id) {
@@ -313,7 +328,7 @@ export default function Dashboard() {
       alignItems: "center",
       flexWrap: "wrap",
       gap: "18px",
-      marginBottom: "28px",
+      marginBottom: "20px",
       boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.15)",
     },
     toggleBtn: {
@@ -443,6 +458,53 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Smart Urgent Alert Banner */}
+      {notices.some((n) => (n.tag + " " + n.title).toLowerCase().match(/(deadline|due|urgent|exam)/)) && (
+        <div
+          style={{
+            backgroundColor: "#fff1f2",
+            border: "1px solid #fecdd3",
+            borderRadius: "12px",
+            padding: "12px 18px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "20px" }}>🚨</span>
+            <div>
+              <strong style={{ fontSize: "13px", color: "#9f1239" }}>Important Academic Alert:</strong>
+              <span style={{ fontSize: "13px", color: "#be123c", marginLeft: "6px" }}>
+                Active assignment submission or exam deadlines are running. Please check bulletins below!
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const el = document.getElementById("student-submissions-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+              else setShowSubmitModal(true);
+            }}
+            style={{
+              padding: "6px 14px",
+              backgroundColor: "#e11d48",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: "700",
+              cursor: "pointer",
+            }}
+          >
+            Submit Now →
+          </button>
+        </div>
+      )}
+
       {/* Guaranteed Clickable Metric Tabs */}
       <div style={styles.metricGrid}>
         {/* Tab 1: Notes */}
@@ -525,32 +587,54 @@ export default function Dashboard() {
             </span>
           </div>
 
-          {notices.map((n) => (
-            <div key={n.id} style={{ padding: "16px", borderRadius: "12px", backgroundColor: "#f8fafc", border: "1px solid #edf2f7", marginBottom: "12px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                <span style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "4px" }}>
-                  {n.tag}
-                </span>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>Oct 15, 2026</span>
-                  {isRealTeacher && isTeacher && (
-                    <button
-                      onClick={() => handleDeleteNotice(n.id)}
-                      style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontWeight: "700" }}
-                      title="Delete Notice"
-                    >
-                      ✕
-                    </button>
-                  )}
+          {notices.map((n) => {
+            const badge = getNoticeBadge(n.tag, n.title);
+            return (
+              <div
+                key={n.id}
+                style={{
+                  padding: "16px",
+                  borderRadius: "12px",
+                  backgroundColor: "#f8fafc",
+                  border: "1px solid #edf2f7",
+                  marginBottom: "12px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <span
+                    style={{
+                      backgroundColor: badge.bg,
+                      color: badge.color,
+                      border: `1px solid ${badge.border}`,
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    {badge.label}
+                  </span>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>Oct 15, 2026</span>
+                    {isRealTeacher && isTeacher && (
+                      <button
+                        onClick={() => handleDeleteNotice(n.id)}
+                        style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontWeight: "700" }}
+                        title="Delete Notice"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <h3 style={{ fontSize: "15px", fontWeight: "700", margin: "0 0 6px 0", color: "#1e293b" }}>{n.title}</h3>
+                <p style={{ fontSize: "13px", color: "#475569", margin: "0 0 8px 0" }}>{n.description}</p>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                  Issued by: <strong>{n.sender}</strong>
                 </div>
               </div>
-              <h3 style={{ fontSize: "15px", fontWeight: "700", margin: "0 0 6px 0", color: "#1e293b" }}>{n.title}</h3>
-              <p style={{ fontSize: "13px", color: "#475569", margin: "0 0 8px 0" }}>{n.description}</p>
-              <div style={{ fontSize: "12px", color: "#64748b" }}>
-                Issued by: <strong>{n.sender}</strong>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div style={styles.cardSection}>
@@ -994,13 +1078,13 @@ export default function Dashboard() {
               <div style={{ marginBottom: "18px" }}>
                 <label style={{ fontSize: "13px", fontWeight: "600", display: "block", marginBottom: "6px" }}>
                   Attach Assignment File
-                  </label>
-                  <FileDropzone
+                </label>
+                <FileDropzone
                   currentFile={submissionFile}
                   onFileSelected={(file) => setSubmissionFile(file)}
                   onClear={() => setSubmissionFile(null)}
                   accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-                  />
+                />
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
