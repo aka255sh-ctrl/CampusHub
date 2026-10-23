@@ -310,6 +310,7 @@ export default function Notes() {
       display: "flex",
       gap: "8px",
       marginTop: "10px",
+      alignItems: "center",
     },
     previewBtn: {
       flex: 1,
@@ -322,6 +323,19 @@ export default function Notes() {
       fontWeight: "600",
       border: "none",
       cursor: "pointer",
+    },
+    downloadBtn: {
+      padding: "10px 14px",
+      backgroundColor: "#f1f5f9",
+      color: "#334155",
+      borderRadius: "8px",
+      textDecoration: "none",
+      fontWeight: "600",
+      fontSize: "13px",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "1px solid #cbd5e1",
     },
     deleteBtn: {
       background: "#fee2e2",
@@ -521,8 +535,20 @@ export default function Notes() {
                     onClick={() => setPreviewFile({ url: note.file_url, title: note.title })}
                     style={styles.previewBtn}
                   >
-                    👁️ Preview Note
+                    👁️ Preview
                   </button>
+
+                  {/* Direct Download Button */}
+                  <a
+                    href={note.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    style={styles.downloadBtn}
+                    title="Download Note"
+                  >
+                    ⬇️
+                  </a>
 
                   {canDelete && (
                     <button
@@ -616,10 +642,11 @@ export default function Notes() {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>Select File</label>
+                <label style={styles.label}>Select File (PDF, Docs, Presentation)</label>
                 <input
                   style={styles.input}
                   type="file"
+                  accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
                   onChange={(e) => setFile(e.target.files[0])}
                   required
                 />
