@@ -1,3 +1,4 @@
+import SkeletonLoader from "../components/SkeletonLoader";
 import { useEffect, useState } from "react";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
@@ -436,67 +437,68 @@ export default function QuestionPapers() {
         )}
       </div>
 
-      {loading && <div>Loading papers...</div>}
+      {/* Skeleton Loader during fetch */}
+      {loading && <SkeletonLoader type="card" count={6} />}
       {error && <div style={{ color: "#ef4444", marginBottom: "16px" }}>{error}</div>}
 
-      <div style={styles.grid}>
-        {filteredPapers.length > 0 ? (
-          filteredPapers.map((paper) => {
-            const canDelete =
-              Boolean(currentUser) &&
-              (currentUser.id === paper.user_id || currentUser.role === "teacher" || !paper.user_id);
+      {!loading && (
+        <div style={styles.grid}>
+          {filteredPapers.length > 0 ? (
+            filteredPapers.map((paper) => {
+              const canDelete =
+                Boolean(currentUser) &&
+                (currentUser.id === paper.user_id || currentUser.role === "teacher" || !paper.user_id);
 
-            return (
-              <div key={paper.id} style={styles.card}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                    <span style={styles.cardBadge}>{paper.semester}</span>
-                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>
-                      Year {paper.year || "2026"}
-                    </span>
+              return (
+                <div key={paper.id} style={styles.card}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                      <span style={styles.cardBadge}>{paper.semester}</span>
+                      <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>
+                        Year {paper.year || "2026"}
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: "18px", fontWeight: "700", margin: "0 0 6px 0", color: "#1e293b" }}>
+                      {paper.title}
+                    </h3>
+                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                      Subject: {paper.subject}
+                    </p>
                   </div>
-                  <h3 style={{ fontSize: "18px", fontWeight: "700", margin: "0 0 6px 0", color: "#1e293b" }}>
-                    {paper.title}
-                  </h3>
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                    Subject: {paper.subject}
-                  </p>
-                </div>
 
-                <div style={styles.cardActions}>
-                  <button
-                    onClick={() => setPreviewFile({ url: paper.file_url, title: paper.title })}
-                    style={styles.previewBtn}
-                  >
-                    👁️ Preview
-                  </button>
-
-                  <a
-                    href={paper.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    download
-                    style={styles.downloadBtn}
-                    title="Download Paper"
-                  >
-                    ⬇️
-                  </a>
-
-                  {canDelete && (
+                  <div style={styles.cardActions}>
                     <button
-                      onClick={() => handleDeletePaper(paper.id)}
-                      style={styles.deleteBtn}
-                      title="Delete Paper"
+                      onClick={() => setPreviewFile({ url: paper.file_url, title: paper.title })}
+                      style={styles.previewBtn}
                     >
-                      🗑️
+                      👁️ Preview
                     </button>
-                  )}
+
+                    <a
+                      href={paper.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      style={styles.downloadBtn}
+                      title="Download Paper"
+                    >
+                      ⬇️
+                    </a>
+
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDeletePaper(paper.id)}
+                        style={styles.deleteBtn}
+                        title="Delete Paper"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-          !loading && (
+              );
+            })
+          ) : (
             <div
               style={{
                 gridColumn: "1 / -1",
@@ -510,9 +512,9 @@ export default function QuestionPapers() {
             >
               No question papers match your filters.
             </div>
-          )
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showModal && (

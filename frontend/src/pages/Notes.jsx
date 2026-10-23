@@ -1,3 +1,4 @@
+import SkeletonLoader from "../components/SkeletonLoader";
 import { useEffect, useState } from "react";
 import PdfPreviewModal from "../components/PdfPreviewModal";
 
@@ -506,65 +507,66 @@ export default function Notes() {
         )}
       </div>
 
-      {loading && <div>Loading notes...</div>}
+      {/* Shimmer Skeleton Loader during API fetch */}
+      {loading && <SkeletonLoader type="card" count={6} />}
       {error && <div style={{ color: "#ef4444", marginBottom: "16px" }}>{error}</div>}
 
-      <div style={styles.grid}>
-        {filteredNotes.length > 0 ? (
-          filteredNotes.map((note) => {
-            const canDelete =
-              Boolean(currentUser) &&
-              (currentUser.id === note.user_id || currentUser.role === "teacher" || !note.user_id);
+      {!loading && (
+        <div style={styles.grid}>
+          {filteredNotes.length > 0 ? (
+            filteredNotes.map((note) => {
+              const canDelete =
+                Boolean(currentUser) &&
+                (currentUser.id === note.user_id || currentUser.role === "teacher" || !note.user_id);
 
-            return (
-              <div key={note.id} style={styles.card}>
-                <div>
-                  <div style={styles.cardHeader}>
-                    <span style={styles.cardBadge}>{note.semester}</span>
-                    <span style={styles.uploaderBadge}>
-                      By: {note.uploader_name || "Campus Community"}
-                    </span>
+              return (
+                <div key={note.id} style={styles.card}>
+                  <div>
+                    <div style={styles.cardHeader}>
+                      <span style={styles.cardBadge}>{note.semester}</span>
+                      <span style={styles.uploaderBadge}>
+                        By: {note.uploader_name || "Campus Community"}
+                      </span>
+                    </div>
+                    <h3 style={styles.cardTitle}>{note.title}</h3>
+                    <p style={styles.cardSubject}>Subject: {note.subject}</p>
                   </div>
-                  <h3 style={styles.cardTitle}>{note.title}</h3>
-                  <p style={styles.cardSubject}>Subject: {note.subject}</p>
-                </div>
 
-                <div style={styles.cardActions}>
-                  {/* In-App Preview Button */}
-                  <button
-                    onClick={() => setPreviewFile({ url: note.file_url, title: note.title })}
-                    style={styles.previewBtn}
-                  >
-                    👁️ Preview
-                  </button>
-
-                  {/* Direct Download Button */}
-                  <a
-                    href={note.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    download
-                    style={styles.downloadBtn}
-                    title="Download Note"
-                  >
-                    ⬇️
-                  </a>
-
-                  {canDelete && (
+                  <div style={styles.cardActions}>
+                    {/* In-App Preview Button */}
                     <button
-                      onClick={() => handleDeleteNote(note.id)}
-                      style={styles.deleteBtn}
-                      title="Delete Note"
+                      onClick={() => setPreviewFile({ url: note.file_url, title: note.title })}
+                      style={styles.previewBtn}
                     >
-                      🗑️
+                      👁️ Preview Note
                     </button>
-                  )}
+
+                    {/* Direct Download Button */}
+                    <a
+                      href={note.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      style={styles.downloadBtn}
+                      title="Download Note"
+                    >
+                      ⬇️
+                    </a>
+
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDeleteNote(note.id)}
+                        style={styles.deleteBtn}
+                        title="Delete Note"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-          !loading && (
+              );
+            })
+          ) : (
             <div
               style={{
                 gridColumn: "1 / -1",
@@ -578,9 +580,9 @@ export default function Notes() {
             >
               No study notes matched your search criteria.
             </div>
-          )
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showModal && (
@@ -642,7 +644,7 @@ export default function Notes() {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>Select File (PDF, Docs, Presentation)</label>
+                <label style={styles.label}>Select File</label>
                 <input
                   style={styles.input}
                   type="file"
