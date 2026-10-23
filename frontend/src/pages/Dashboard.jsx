@@ -5,6 +5,7 @@ import PdfPreviewModal from "../components/PdfPreviewModal";
 export default function Dashboard() {
   const [student, setStudent] = useState(null);
   const [isTeacher, setIsTeacher] = useState(false);
+  const [isRealTeacher, setIsRealTeacher] = useState(false); // Database verified teacher check
   const [stats, setStats] = useState({ notesCount: 0, papersCount: 0 });
   const [recentUploads, setRecentUploads] = useState([]);
   const [notices, setNotices] = useState([]);
@@ -12,14 +13,14 @@ export default function Dashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // PDF / Universal Preview Modal
+  // PDF Preview Modal
   const [previewFile, setPreviewFile] = useState(null);
 
   // Notice Modal (Teacher)
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [noticeForm, setNoticeForm] = useState({
     title: "",
-    sender: "Prof. Akash Kumar (Faculty Coordinator)",
+    sender: "Prof. Faculty Coordinator",
     tag: "Academic",
     description: "",
   });
@@ -39,6 +40,10 @@ export default function Dashboard() {
         setStudent(u);
         if (u.role === "teacher") {
           setIsTeacher(true);
+          setIsRealTeacher(true);
+        } else {
+          setIsTeacher(false);
+          setIsRealTeacher(false);
         }
       } catch (e) {
         console.error("Local user parse error", e);
@@ -83,8 +88,9 @@ export default function Dashboard() {
     }
   }
 
-  // Teacher actions
+  // Teacher actions (Protected)
   async function handleDeleteNote(id) {
+    if (!isRealTeacher) return alert("Unauthorized access!");
     if (!window.confirm("Teacher Action: Delete this study material?")) return;
     try {
       const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/notes/${id}`, { method: "DELETE" });
@@ -95,6 +101,7 @@ export default function Dashboard() {
   }
 
   async function handleDeleteNotice(id) {
+    if (!isRealTeacher) return alert("Unauthorized access!");
     if (!window.confirm("Teacher Action: Delete this bulletin?")) return;
     try {
       const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/notices/${id}`, { method: "DELETE" });
@@ -106,6 +113,7 @@ export default function Dashboard() {
 
   async function handleCreateNotice(e) {
     e.preventDefault();
+    if (!isRealTeacher) return alert("Unauthorized access!");
     try {
       const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/notices", {
         method: "POST",
@@ -117,7 +125,7 @@ export default function Dashboard() {
         setShowNoticeModal(false);
         setNoticeForm({
           title: "",
-          sender: `Prof. ${student?.name || "Akash Kumar"} (Faculty)`,
+          sender: `Prof. ${student?.name || "Faculty"}`,
           tag: "Academic",
           description: "",
         });
@@ -128,10 +136,10 @@ export default function Dashboard() {
     }
   }
 
-  // Teacher Promotes Another User to Teacher
   async function handleRoleChange(userId, targetRole, userName) {
-    const actionText = targetRole === "teacher" 
-      ? `Promote ${userName} to Teacher / Faculty Administrator? They will also be able to grant teacher roles.` 
+    if (!isRealTeacher) return alert("Unauthorized access!");
+    const actionText = targetRole === "teacher"
+      ? `Promote ${userName} to Teacher / Faculty Administrator?`
       : `Demote ${userName} back to Student?`;
 
     if (!window.confirm(actionText)) return;
@@ -153,8 +161,8 @@ export default function Dashboard() {
     }
   }
 
-  // Teacher submission approve handler
   async function handleUpdateSubmissionStatus(subId) {
+    if (!isRealTeacher) return alert("Unauthorized access!");
     try {
       const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/admin/submissions/${subId}`, {
         method: "PUT",
@@ -170,8 +178,8 @@ export default function Dashboard() {
     }
   }
 
-  // Export Student Submissions & Registry to CSV / Excel
   function exportReportToCSV() {
+    if (!isRealTeacher) return alert("Unauthorized access!");
     if (!registeredStudents.length) {
       alert("No student records available to export.");
       return;
@@ -218,11 +226,10 @@ export default function Dashboard() {
     document.body.removeChild(link);
   }
 
-  // Student submission handler (FIXED: Reliable FormData Construction)
+  // Student submission handler
   async function handleStudentSubmit(e) {
     e.preventDefault();
-
-    const currentUserId = student?.id || (student?._id) || 1;
+    const currentUserId = student?.id || 1;
     const currentUserName = student?.name || displayName;
 
     if (!assignmentTitle.trim()) {
@@ -242,7 +249,7 @@ export default function Dashboard() {
     formData.append("student_id", currentUserId);
     formData.append("student_name", currentUserName);
     formData.append("assignment_title", assignmentTitle.trim());
-    formData.append("submissionFile", submissionFile); // Field matched with backend multer
+    formData.append("submissionFile", submissionFile);
 
     try {
       const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/submissions", {
@@ -280,7 +287,7 @@ export default function Dashboard() {
       minHeight: "100vh",
     },
     headerCard: {
-      backgroundColor: isTeacher ? "#0f172a" : "#1e293b",
+      backgroundColor: (isRealTeacher && isTeacher) ? "#0f172a" : "#1e293b",
       color: "#ffffff",
       borderRadius: "16px",
       padding: "24px 30px",
@@ -319,7 +326,7 @@ export default function Dashboard() {
     },
     mainGrid: {
       display: "grid",
-      gridTemplateColumns: isTeacher ? "1.2fr 1.2fr" : "1.5fr 1fr",
+      gridTemplateColumns: (isRealTeacher && isTeacher) ? "1.2fr 1.2fr" : "1.5fr 1fr",
       gap: "24px",
       marginBottom: "28px",
     },
@@ -345,7 +352,6 @@ export default function Dashboard() {
 
   return (
     <div style={styles.container}>
-      {/* Universal Preview Modal */}
       {previewFile && (
         <PdfPreviewModal
           fileUrl={previewFile.url}
@@ -361,30 +367,35 @@ export default function Dashboard() {
             <span style={{ backgroundColor: "rgba(255,255,255,0.12)", padding: "4px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "600" }}>
               🏛️ Department of Computer Science & Engineering
             </span>
-            <button
-              style={styles.toggleBtn}
-              onClick={() => {
-                setIsTeacher(!isTeacher);
-              }}
-            >
-              {isTeacher ? "Viewing as Faculty Controller 👨‍🏫 (Full Admin)" : "Viewing as Student 🎓"}
-            </button>
+
+            {isRealTeacher ? (
+              <button
+                style={styles.toggleBtn}
+                onClick={() => setIsTeacher(!isTeacher)}
+              >
+                {isTeacher ? "Switch to Student View 🎓" : "Switch to Faculty Admin View 👨‍🏫"}
+              </button>
+            ) : (
+              <span style={{ backgroundColor: "#2563eb", color: "#fff", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: "700" }}>
+                🎓 Student Account
+              </span>
+            )}
           </div>
 
           <h1 style={{ fontSize: "24px", fontWeight: "800", margin: "0 0 6px 0" }}>
-            {isTeacher 
-              ? `Faculty Administration Control — Prof. ${displayName}` 
+            {(isRealTeacher && isTeacher)
+              ? `Faculty Administration Control — Prof. ${displayName}`
               : "Student Academic Portal 2026-27 — Kalaburagi, Karnataka"}
           </h1>
           <p style={{ margin: 0, fontSize: "14px", color: "#94a3b8" }}>
-            {isTeacher 
-              ? "Access Level: Chief Faculty Controller • Kalaburagi Polytechnic • Full Role Delegation Authority" 
+            {(isRealTeacher && isTeacher)
+              ? "Access Level: Chief Faculty Controller • Kalaburagi Polytechnic • Full Role Delegation Authority"
               : `Student: ${displayName} • Academic Year 2026-27 • Kalaburagi District`}
           </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
-          {isTeacher ? (
+          {(isRealTeacher && isTeacher) ? (
             <button
               onClick={() => setShowNoticeModal(true)}
               style={{ backgroundColor: "#16a34a", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
@@ -468,7 +479,7 @@ export default function Dashboard() {
                 </span>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   <span style={{ fontSize: "12px", color: "#94a3b8" }}>Oct 15, 2026</span>
-                  {isTeacher && (
+                  {isRealTeacher && isTeacher && (
                     <button
                       onClick={() => handleDeleteNotice(n.id)}
                       style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontWeight: "700" }}
@@ -510,7 +521,7 @@ export default function Dashboard() {
                 >
                   👁️ Preview
                 </button>
-                {isTeacher && (
+                {isRealTeacher && isTeacher && (
                   <button
                     onClick={() => handleDeleteNote(n.id)}
                     style={{ backgroundColor: "#fee2e2", color: "#dc2626", border: "none", padding: "6px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}
@@ -525,8 +536,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Teacher View: Student Roster + Faculty Role Delegation + Export Table */}
-      {isTeacher && (
+      {/* Teacher View: User Registry + Delegation Management + Submissions Review */}
+      {isRealTeacher && isTeacher && (
         <div style={{ ...styles.cardSection, marginTop: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
             <div>
