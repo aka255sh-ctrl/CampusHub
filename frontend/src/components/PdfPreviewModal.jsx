@@ -1,14 +1,14 @@
 export default function PdfPreviewModal({ fileUrl, title, onClose }) {
   if (!fileUrl) return null;
 
-  // File type detection
-  const isImage = fileUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i);
-  const isDoc = fileUrl.match(/\.(doc|docx|ppt|pptx|xls|xlsx)($|\?)/i);
+  // Render backend base URL fix
+  const BACKEND_BASE = "https://campushub-backend-6rtk.onrender.com";
+  const fullUrl = fileUrl.startsWith("http")
+    ? fileUrl
+    : `${BACKEND_BASE}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
 
-  // Office documents ke liye Google viewer fallback, warna direct fileUrl (PDFs/Images direct load hoti hain)
-  const viewerUrl = isDoc
-    ? `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`
-    : fileUrl;
+  const isCsvOrExcel = fullUrl.match(/\.(csv|xlsx?|tsv)$/i);
+  const isImage = fullUrl.match(/\.(jpe?g|png|gif|webp|svg)$/i);
 
   return (
     <div
@@ -24,87 +24,72 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
         alignItems: "center",
         justifyContent: "center",
         zIndex: 2000,
-        padding: "10px",
+        padding: "20px",
       }}
+      onClick={onClose}
     >
       <div
         style={{
           backgroundColor: "#ffffff",
+          borderRadius: "16px",
           width: "100%",
-          maxWidth: "1000px",
-          height: "92vh",
-          borderRadius: "12px",
+          maxWidth: "920px",
+          height: "85vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
           overflow: "hidden",
         }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header */}
+        {/* Header */}
         <div
           style={{
-            padding: "12px 16px",
+            padding: "16px 24px",
             borderBottom: "1px solid #e2e8f0",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            flexWrap: "wrap",
-            gap: "10px",
-            backgroundColor: "#f8fafc",
           }}
         >
-          <div style={{ minWidth: "160px", flex: "1 1 auto" }}>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: "15px",
-                fontWeight: "700",
-                color: "#0f172a",
-                wordBreak: "break-word",
-              }}
-            >
-              {title || "Document Preview"}
+          <div>
+            <h3 style={{ margin: "0 0 2px 0", fontSize: "16px", fontWeight: "700", color: "#0f172a" }}>
+              {title || "Document Viewer"}
             </h3>
-            <span style={{ fontSize: "11px", color: "#64748b" }}>
-              In-App Secure Reader
-            </span>
+            <span style={{ fontSize: "12px", color: "#64748b" }}>In-App Secure Reader</span>
           </div>
-          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-            {/* Direct Open / Pop-out button */}
+
+          <div style={{ display: "flex", gap: "10px" }}>
             <a
-              href={fileUrl}
+              href={fullUrl}
               target="_blank"
               rel="noreferrer"
               style={{
-                padding: "6px 12px",
-                backgroundColor: "#f1f5f9",
+                padding: "8px 14px",
+                borderRadius: "8px",
                 border: "1px solid #cbd5e1",
-                color: "#334155",
-                borderRadius: "6px",
+                textDecoration: "none",
                 fontSize: "12px",
                 fontWeight: "600",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
+                color: "#334155",
+                backgroundColor: "#f8fafc",
               }}
             >
               Open New Tab ↗
             </a>
             <a
-              href={fileUrl}
+              href={fullUrl}
               download
               target="_blank"
               rel="noreferrer"
               style={{
-                padding: "6px 12px",
+                padding: "8px 14px",
+                borderRadius: "8px",
                 backgroundColor: "#2563eb",
-                color: "#fff",
-                borderRadius: "6px",
+                color: "#ffffff",
+                textDecoration: "none",
                 fontSize: "12px",
                 fontWeight: "600",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
               }}
             >
               Download
@@ -112,12 +97,12 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
             <button
               onClick={onClose}
               style={{
-                padding: "6px 12px",
-                backgroundColor: "#f1f5f9",
+                padding: "8px 14px",
+                borderRadius: "8px",
                 border: "1px solid #cbd5e1",
-                borderRadius: "6px",
+                backgroundColor: "#fff",
                 fontSize: "12px",
-                fontWeight: "700",
+                fontWeight: "600",
                 cursor: "pointer",
               }}
             >
@@ -126,53 +111,54 @@ export default function PdfPreviewModal({ fileUrl, title, onClose }) {
           </div>
         </div>
 
-        {/* Universal Viewer Canvas */}
-        <div
-          style={{
-            flex: 1,
-            backgroundColor: "#1e293b",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            position: "relative",
-            overflow: "auto",
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
-          {isImage ? (
-            <img
-              src={fileUrl}
-              alt={title}
+        {/* Viewer Body */}
+        <div style={{ flex: 1, backgroundColor: "#0f172a", position: "relative" }}>
+          {isCsvOrExcel ? (
+            <div
               style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                padding: "8px",
-              }}
-            />
-          ) : (
-            <object
-              data={viewerUrl}
-              type="application/pdf"
-              style={{
-                width: "100%",
                 height: "100%",
-                border: "none",
-                display: "block",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                textAlign: "center",
+                padding: "20px",
               }}
             >
-              {/* Fallback agar browser object tag support na kare */}
-              <iframe
-                src={viewerUrl}
-                title={title}
+              <span style={{ fontSize: "48px", marginBottom: "12px" }}>📊</span>
+              <h4 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>Spreadsheet / CSV File</h4>
+              <p style={{ margin: "0 0 20px 0", color: "#94a3b8", maxWidth: "400px", fontSize: "13px" }}>
+                Direct browser inline preview is not supported for raw spreadsheet files. Click below to download and view in Excel or Google Sheets.
+              </p>
+              <a
+                href={fullUrl}
+                download
+                target="_blank"
+                rel="noreferrer"
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                  display: "block",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  backgroundColor: "#16a34a",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                  fontWeight: "700",
+                  fontSize: "13px",
                 }}
-              />
-            </object>
+              >
+                📥 Download {title || "File"}
+              </a>
+            </div>
+          ) : isImage ? (
+            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>
+              <img src={fullUrl} alt={title} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+            </div>
+          ) : (
+            <iframe
+              src={fullUrl}
+              title={title}
+              style={{ width: "100%", height: "100%", border: "none" }}
+            />
           )}
         </div>
       </div>
