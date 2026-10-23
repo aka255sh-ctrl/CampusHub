@@ -194,6 +194,7 @@ export default function Dashboard() {
     }
   }
 
+  // Export to Excel/CSV with UTF-8 BOM encoding & fallback hyphens
   function exportReportToCSV() {
     if (!isRealTeacher) return alert("Unauthorized access!");
     if (!registeredStudents.length) {
@@ -225,12 +226,11 @@ export default function Dashboard() {
         `"${st.role || "student"}"`,
         `"${sub ? sub.assignment_title : "No submission"}"`,
         `"${sub ? sub.status : "Pending"}"`,
-        `"${sub?.marks ? sub.marks : "-"}"`, // Plain hyphen instead of em-dash
+        `"${sub?.marks ? sub.marks : "-"}"`,
         `"${sub?.feedback ? sub.feedback : "-"}"`,
       ];
     });
 
-    // \uFEFF (UTF-8 BOM) add karne se Excel me encoding kabhi corrupt nahi hoti
     const csvContent =
       "\uFEFF" +
       headers.join(",") +
@@ -374,6 +374,7 @@ export default function Dashboard() {
   };
 
   const displayName = student?.name || "Akash kumar";
+  const studentMySubmissions = submissions.filter((s) => s.student_id === student?.id);
 
   return (
     <div style={styles.container}>
@@ -560,6 +561,89 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* Student View: My Submissions & Academic Grades Tracking Card */}
+      {!isTeacher && (
+        <div style={{ ...styles.cardSection, marginTop: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div>
+              <h2 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 4px 0", color: "#0f172a" }}>
+                📊 My Assignment Submissions & Faculty Evaluation
+              </h2>
+              <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                Track your graded assignments, verified marks, and direct faculty feedback.
+              </p>
+            </div>
+            <span style={{ fontSize: "12px", fontWeight: "700", color: "#2563eb", backgroundColor: "#eff6ff", padding: "6px 12px", borderRadius: "8px" }}>
+              Total: {studentMySubmissions.length} Submitted
+            </span>
+          </div>
+
+          {studentMySubmissions.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "28px", color: "#64748b", backgroundColor: "#f8fafc", borderRadius: "12px" }}>
+              You haven't submitted any assignments yet. Click <strong>"Submit Assignment"</strong> to upload your work.
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f8fafc", textAlign: "left", borderBottom: "2px solid #e2e8f0" }}>
+                    <th style={{ padding: "12px" }}>Assignment Title</th>
+                    <th style={{ padding: "12px" }}>Work File</th>
+                    <th style={{ padding: "12px" }}>Status</th>
+                    <th style={{ padding: "12px" }}>Marks Obtained</th>
+                    <th style={{ padding: "12px" }}>Teacher Feedback</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentMySubmissions.map((sub) => (
+                    <tr key={sub.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "12px", fontWeight: "700", color: "#1e293b" }}>{sub.assignment_title}</td>
+                      <td style={{ padding: "12px" }}>
+                        <button
+                          onClick={() => setPreviewFile({ url: sub.file_url, title: sub.assignment_title })}
+                          style={{
+                            padding: "4px 8px",
+                            fontSize: "11px",
+                            backgroundColor: "#f1f5f9",
+                            color: "#2563eb",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontWeight: "700",
+                          }}
+                        >
+                          👁️ View Work
+                        </button>
+                      </td>
+                      <td style={{ padding: "12px" }}>
+                        <span
+                          style={{
+                            backgroundColor: sub.status === "Verified & Approved" ? "#ecfdf5" : "#eff6ff",
+                            color: sub.status === "Verified & Approved" ? "#059669" : "#2563eb",
+                            padding: "3px 8px",
+                            borderRadius: "4px",
+                            fontSize: "11px",
+                            fontWeight: "700",
+                          }}
+                        >
+                          {sub.status === "Verified & Approved" ? "Verified & Graded" : "Submitted"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px", fontWeight: "800", color: sub.marks ? "#059669" : "#64748b" }}>
+                        {sub.marks ? sub.marks : "Pending"}
+                      </td>
+                      <td style={{ padding: "12px", color: "#475569" }}>
+                        {sub.feedback ? sub.feedback : "Faculty evaluation in progress..."}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Teacher View: User Registry + Delegation Management + Submissions Evaluation */}
       {isRealTeacher && isTeacher && (
