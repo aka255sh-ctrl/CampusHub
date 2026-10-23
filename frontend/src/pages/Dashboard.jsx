@@ -89,7 +89,6 @@ export default function Dashboard() {
     }
   }
 
-  // Dynamic badge resolver for notices
   function getNoticeBadge(tag, title = "") {
     const text = (tag + " " + title).toLowerCase();
     if (text.includes("deadline") || text.includes("due") || text.includes("urgent")) {
@@ -387,6 +386,7 @@ export default function Dashboard() {
 
   const displayName = student?.name || "Akash kumar";
   const studentMySubmissions = submissions.filter((s) => s.student_id === student?.id);
+  const latestNotice = notices[0];
 
   return (
     <div style={styles.container}>
@@ -397,6 +397,90 @@ export default function Dashboard() {
           onClose={() => setPreviewFile(null)}
         />
       )}
+
+      {/* Dynamic Urgent Announcement / Exam Marquee Ticker */}
+      <div
+        style={{
+          backgroundColor: "#eff6ff",
+          border: "1px solid #bfdbfe",
+          borderRadius: "12px",
+          padding: "10px 18px",
+          marginBottom: "18px",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          boxShadow: "0 2px 4px rgba(37, 99, 235, 0.05)",
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          style={{
+            backgroundColor: "#2563eb",
+            color: "#ffffff",
+            fontSize: "11px",
+            fontWeight: "800",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            padding: "4px 8px",
+            borderRadius: "6px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              backgroundColor: "#ffffff",
+              display: "inline-block",
+            }}
+          />
+          Live Notice
+        </span>
+
+        <div
+          style={{
+            flex: 1,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+            fontSize: "13px",
+            color: "#1e40af",
+            fontWeight: "500",
+            minWidth: "200px",
+          }}
+        >
+          {latestNotice ? (
+            <>
+              📢 <strong>{latestNotice.title}:</strong> {latestNotice.description}
+            </>
+          ) : (
+            <>
+              📢 <strong>Exam Cell Alert:</strong> Mid-Term & End-Term previous question papers are now available in the repository!
+            </>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Link
+            to="/papers"
+            style={{
+              fontSize: "12px",
+              fontWeight: "700",
+              color: "#2563eb",
+              textDecoration: "none",
+              padding: "4px 10px",
+              borderRadius: "6px",
+              backgroundColor: "#dbeafe",
+            }}
+          >
+            Question Papers →
+          </Link>
+        </div>
+      </div>
 
       {/* Top Academic Banner */}
       <div style={styles.headerCard}>
@@ -505,9 +589,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Guaranteed Clickable Metric Tabs */}
+      {/* Metric Cards */}
       <div style={styles.metricGrid}>
-        {/* Tab 1: Notes */}
         <Link to="/notes" style={styles.metricCard} title="Click to view published notes">
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Published Notes</p>
@@ -517,7 +600,6 @@ export default function Dashboard() {
           <span style={{ fontSize: "28px" }}>📚</span>
         </Link>
 
-        {/* Tab 2: Papers */}
         <Link to="/papers" style={styles.metricCard} title="Click to view question papers">
           <div>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 4px 0", fontWeight: "600" }}>Previous Papers</p>
@@ -527,7 +609,6 @@ export default function Dashboard() {
           <span style={{ fontSize: "28px" }}>📜</span>
         </Link>
 
-        {/* Tab 3: Registered Users */}
         <button
           type="button"
           onClick={() => {
@@ -551,7 +632,6 @@ export default function Dashboard() {
           <span style={{ fontSize: "28px" }}>👥</span>
         </button>
 
-        {/* Tab 4: Live Submissions */}
         <button
           type="button"
           onClick={() => {
