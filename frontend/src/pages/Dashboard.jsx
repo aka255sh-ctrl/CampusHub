@@ -524,6 +524,48 @@ export default function Dashboard() {
       }
     }
   });
+
+  // Weekly Online Class Schedule (Monday to Saturday)
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDayName = daysOfWeek[new Date().getDay()];
+
+  const weeklySchedule = {
+    Monday: [
+      { time: "09:30 AM - 10:30 AM", subject: "Full Stack Development", faculty: "Prof. Akash Kumar", room: "Virtual Room A" },
+      { time: "11:00 AM - 12:00 PM", subject: "Computer Networks & Security", faculty: "Prof. Coordinator", room: "Virtual Room B" },
+      { time: "01:30 PM - 03:30 PM", subject: "FSD Practical Lab & Review", faculty: "Prof. Akash Kumar", room: "Lab Stream 1" },
+    ],
+    Tuesday: [
+      { time: "09:30 AM - 10:30 AM", subject: "Database Management Systems", faculty: "Prof. Faculty Coordinator", room: "Virtual Room A" },
+      { time: "11:00 AM - 12:00 PM", subject: "Software Engineering Principles", faculty: "Prof. Coordinator", room: "Virtual Room B" },
+      { time: "01:30 PM - 03:30 PM", subject: "DBMS SQL Practical Lab", faculty: "Prof. Faculty Coordinator", room: "Lab Stream 2" },
+    ],
+    Wednesday: [
+      { time: "09:30 AM - 10:30 AM", subject: "Full Stack Development", faculty: "Prof. Akash Kumar", room: "Virtual Room A" },
+      { time: "11:00 AM - 12:00 PM", subject: "Operating Systems Architecture", faculty: "Prof. Coordinator", room: "Virtual Room B" },
+      { time: "02:00 PM - 03:00 PM", subject: "Weekly Doubt Clearing Forum", faculty: "All Faculty Members", room: "General Room" },
+    ],
+    Thursday: [
+      { time: "09:30 AM - 10:30 AM", subject: "Microcontrollers & Embedded Systems", faculty: "Prof. Coordinator", room: "Virtual Room A" },
+      { time: "11:00 AM - 12:00 PM", subject: "Computer Networks & Security", faculty: "Prof. Coordinator", room: "Virtual Room B" },
+      { time: "01:30 PM - 03:30 PM", subject: "Network Packet Tracing Lab", faculty: "Prof. Coordinator", room: "Lab Stream 1" },
+    ],
+    Friday: [
+      { time: "09:30 AM - 10:30 AM", subject: "Software Engineering & Testing", faculty: "Prof. Coordinator", room: "Virtual Room A" },
+      { time: "11:00 AM - 12:00 PM", subject: "Database Management Systems", faculty: "Prof. Faculty Coordinator", room: "Virtual Room B" },
+      { time: "02:00 PM - 04:00 PM", subject: "Assignment Submission & Evaluation Window", faculty: "Prof. Akash Kumar", room: "Portal Audit" },
+    ],
+    Saturday: [
+      { time: "10:00 AM - 11:30 AM", subject: "Special Technical Seminar & Viva Prep", faculty: "Department HOD", room: "Main Hall" },
+      { time: "12:00 PM - 01:00 PM", subject: "Student Self-Study & Notes Review", faculty: "Self-Paced", room: "Digital Library" },
+    ],
+    Sunday: [
+      { time: "All Day", subject: "Academic Recess / Weekend Revision", faculty: "Self-Paced", room: "Off-Campus" },
+    ],
+  };
+
+  const todayClasses = weeklySchedule[currentDayName] || weeklySchedule["Monday"];
+
   const avgScore = marksMax > 0 ? Math.round((marksSum / marksMax) * 100) : null;
 
   return (
@@ -1150,6 +1192,87 @@ export default function Dashboard() {
                   >
                     🗑️
                   </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Remote Learning: Weekly Online Timetable & Today's Schedule */}
+      <div style={{ ...styles.cardSection, marginBottom: "28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <span style={{ fontSize: "18px" }}>📅</span>
+              <h2 style={{ fontSize: "17px", fontWeight: "800", margin: 0, color: "#0f172a" }}>
+                Virtual Class Timetable — {currentDayName}'s Schedule
+              </h2>
+            </div>
+            <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+              Live periods for remote study, digital lab hours, and faculty consultation.
+            </p>
+          </div>
+
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: "700",
+              color: "#2563eb",
+              backgroundColor: "#eff6ff",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              border: "1px solid #bfdbfe",
+            }}
+          >
+            ● Today: {currentDayName} ({todayClasses.length} Sessions)
+          </span>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+          {todayClasses.map((item, idx) => (
+            <div
+              key={idx}
+              style={{
+                backgroundColor: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "800",
+                      color: "#1e40af",
+                      backgroundColor: "#dbeafe",
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    ⏰ {item.time}
+                  </span>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "600" }}>{item.room}</span>
+                </div>
+                <h4 style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>
+                  {item.subject}
+                </h4>
+              </div>
+
+              <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>
+                  Faculty: <strong style={{ color: "#334155" }}>{item.faculty}</strong>
+                </span>
+
+                {liveClass && liveClass.subject.toLowerCase().includes(item.subject.toLowerCase().slice(0, 5)) ? (
+                  <span style={{ fontSize: "11px", color: "#dc2626", fontWeight: "800" }}>🔴 LIVE NOW</span>
+                ) : (
+                  <span style={{ fontSize: "11px", color: "#16a34a", fontWeight: "700" }}>Scheduled</span>
                 )}
               </div>
             </div>
