@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import FileDropzone from "../components/FileDropzone";
 import PdfPreviewModal from "../components/PdfPreviewModal";
@@ -528,8 +528,10 @@ export default function Dashboard() {
 
           <h1 style={{ fontSize: "24px", fontWeight: "800", margin: "0 0 6px 0" }}>
             {isRealTeacher && isTeacher
-              ? `Faculty Administration Control — Prof. ${displayName}`
-              : "Student Academic Portal 2026-27 — Kalaburagi, Karnataka"}
+            ? `Faculty Administration Control — ${displayName.startsWith("Prof.") ? displayName : `Prof. ${displayName}`}`
+            : "Student Academic Portal 2026-27 — Kalaburagi, Karnataka"}
+
+
           </h1>
           <p style={{ margin: 0, fontSize: "14px", color: "#94a3b8" }}>
             {isRealTeacher && isTeacher
