@@ -143,7 +143,14 @@ export default function Dashboard() {
 
   async function handleStartLiveClass(e) {
     e.preventDefault();
-    if (!liveForm.meetUrl.trim()) return alert("Please enter Google Meet / Zoom link!");
+
+    // Auto-extract clean URL from pasted invitation text
+    const match = liveForm.meetUrl.match(/https?:\/\/[^\s]+/);
+    const cleanUrl = match ? match[0] : liveForm.meetUrl.trim();
+
+    if (!cleanUrl.startsWith("http")) {
+      return alert("Please enter a valid Google Meet or Zoom URL!");
+    }
 
     try {
       const res = await fetch("https://campushub-backend-6rtk.onrender.com/api/live-class", {
@@ -151,9 +158,11 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...liveForm,
+          meetUrl: cleanUrl,
           teacherName: displayName,
         }),
       });
+
       if (res.ok) {
         setShowLiveModal(false);
         setLiveForm({ subject: "", meetUrl: "", topic: "" });
