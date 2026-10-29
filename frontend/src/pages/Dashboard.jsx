@@ -46,6 +46,18 @@ export default function Dashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState("");
 
+  // Clean Name Helper (Display official name instead of raw email)
+  const getCleanName = (userObj) => {
+    if (userObj?.name && userObj.name.trim() !== "") return userObj.name.trim();
+    if (userObj?.email) {
+      const raw = userObj.email.split("@")[0].replace(/[._]/g, " ");
+      return raw.charAt(0).toUpperCase() + raw.slice(1);
+    }
+    return "Akash Kumar";
+  };
+
+  const displayName = getCleanName(student);
+
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
@@ -321,7 +333,7 @@ export default function Dashboard() {
         setShowNoticeModal(false);
         setNoticeForm({
           title: "",
-          sender: `Prof. ${student?.name || "Faculty"}`,
+          sender: `Prof. ${displayName}`,
           tag: "Academic",
           description: "",
         });
@@ -354,6 +366,41 @@ export default function Dashboard() {
       fetchDashboardData();
     } catch (err) {
       alert(err.message || "Action failed.");
+    }
+  }
+
+  async function handleDeleteSubmission(submissionId, title) {
+    if (!isRealTeacher) return alert("Unauthorized access!");
+    if (!window.confirm(`Teacher Action: Delete assignment "${title}" permanently?`)) return;
+
+    try {
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/admin/submissions/${submissionId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      alert(data.message);
+      fetchDashboardData();
+    } catch (err) {
+      alert(err.message || "Failed to delete assignment.");
+    }
+  }
+
+  async function handleRemoveUser(userId, userName) {
+    if (!isRealTeacher) return alert("Unauthorized access!");
+    if (userId === student?.id) return alert("You cannot delete your own logged-in account!");
+    if (!window.confirm(`Teacher Action: Remove ${userName} from CampusHub? All their submissions will also be cleared.`)) return;
+
+    try {
+      const res = await fetch(`https://campushub-backend-6rtk.onrender.com/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      alert(data.message);
+      fetchDashboardData();
+    } catch (err) {
+      alert(err.message || "Failed to remove user.");
     }
   }
 
@@ -408,7 +455,7 @@ export default function Dashboard() {
       const sub = submissions.find((s) => s.student_id === st.id);
       return [
         st.id,
-        `"${st.name || ""}"`,
+        `"${getCleanName(st)}"`,
         `"${st.email || ""}"`,
         `"${st.course || "Diploma CS"}"`,
         `"${st.semester || "5th Sem"}"`,
@@ -443,7 +490,6 @@ export default function Dashboard() {
   async function handleStudentSubmit(e) {
     e.preventDefault();
     const currentUserId = student?.id || 1;
-    const currentUserName = student?.name || displayName;
 
     if (!assignmentTitle.trim()) {
       alert("Please enter the assignment or lab title.");
@@ -460,7 +506,7 @@ export default function Dashboard() {
 
     const formData = new FormData();
     formData.append("student_id", currentUserId);
-    formData.append("student_name", currentUserName);
+    formData.append("student_name", displayName);
     formData.append("assignment_title", assignmentTitle.trim());
     formData.append("submissionFile", submissionFile);
 
@@ -566,7 +612,6 @@ export default function Dashboard() {
     },
   };
 
-  const displayName = student?.name || "Akash kumar";
   const studentMySubmissions = submissions.filter((s) => s.student_id === student?.id);
   const latestNotice = notices[0];
 
@@ -1517,7 +1562,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Teacher View: User Registry + Submissions Evaluation */}
+      {/* Teacher View: User Registry + Submissions Evaluation + Account Removal */}
       {isRealTeacher && isTeacher && (
         <div id="users-delegation-section" style={{ ...styles.cardSection, marginTop: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
@@ -1526,7 +1571,7 @@ export default function Dashboard() {
                 🧑‍🎓 Portal Users & Faculty Delegation Management
               </h2>
               <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                Authorize other teachers, evaluate assignments with marks/feedback, and inspect submissions.
+                Authorize faculty, evaluate/delete assignments, and manage registered student accounts.
               </p>
             </div>
             <div style={{ display: "flex", gap: "10px" }}>
@@ -1556,25 +1601,26 @@ export default function Dashboard() {
               <thead>
                 <tr style={{ backgroundColor: "#f8fafc", textAlign: "left", borderBottom: "2px solid #e2e8f0" }}>
                   <th style={{ padding: "12px" }}>ID</th>
-                  <th style={{ padding: "12px" }}>Name & Email</th>
+                  <th style={{ padding: "12px" }}>Student Name</th>
                   <th style={{ padding: "12px" }}>Role Status</th>
                   <th style={{ padding: "12px" }}>Latest Submission</th>
-                  <th style={{ padding: "12px" }}>Attached Work</th>
+                  <th style={{ padding: "12px" }}>Work File</th>
                   <th style={{ padding: "12px" }}>Evaluation & Marks</th>
-                  <th style={{ padding: "12px" }}>Faculty Delegation</th>
+                  <th style={{ padding: "12px" }}>Actions & Access</th>
                 </tr>
               </thead>
               <tbody>
                 {registeredStudents.map((st) => {
                   const studentSub = submissions.find((s) => s.student_id === st.id);
                   const isCurrentTeacher = st.role === "teacher";
+                  const studentDisplayName = getCleanName(st);
 
                   return (
                     <tr key={st.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "12px", fontWeight: "600", color: "#64748b" }}>#{st.id}</td>
                       <td style={{ padding: "12px" }}>
-                        <div style={{ fontWeight: "700", color: "#1e293b" }}>{st.name}</div>
-                        <div style={{ fontSize: "11px", color: "#64748b" }}>{st.email}</div>
+                        <div style={{ fontWeight: "800", color: "#1e293b", fontSize: "14px" }}>{studentDisplayName}</div>
+                        <div style={{ fontSize: "11px", color: "#94a3b8" }}>{st.course || "Diploma CS"} • {st.semester || "5th Sem"}</div>
                       </td>
                       <td style={{ padding: "12px" }}>
                         <span style={{
@@ -1586,7 +1632,7 @@ export default function Dashboard() {
                           fontWeight: "700",
                           border: isCurrentTeacher ? "1px solid #fde68a" : "1px solid #bfdbfe"
                         }}>
-                          {isCurrentTeacher ? "👨‍🏫 Faculty Teacher" : "🎓 Student"}
+                          {isCurrentTeacher ? "👨‍🏫 Faculty" : "🎓 Student"}
                         </span>
                       </td>
                       <td style={{ padding: "12px", color: "#0f172a", fontWeight: "500" }}>
@@ -1594,21 +1640,41 @@ export default function Dashboard() {
                       </td>
                       <td style={{ padding: "12px" }}>
                         {studentSub?.file_url ? (
-                          <button
-                            onClick={() => setPreviewFile({ url: studentSub.file_url, title: studentSub.assignment_title })}
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "11px",
-                              backgroundColor: "#f1f5f9",
-                              color: "#2563eb",
-                              border: "1px solid #cbd5e1",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "700"
-                            }}
-                          >
-                            👁️ View
-                          </button>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <button
+                              onClick={() => setPreviewFile({ url: studentSub.file_url, title: studentSub.assignment_title })}
+                              style={{
+                                padding: "4px 8px",
+                                fontSize: "11px",
+                                backgroundColor: "#eff6ff",
+                                color: "#2563eb",
+                                border: "1px solid #bfdbfe",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontWeight: "700"
+                              }}
+                            >
+                              👁️ View
+                            </button>
+
+                            {/* 🗑️ Teacher Delete Assignment Button */}
+                            <button
+                              onClick={() => handleDeleteSubmission(studentSub.id, studentSub.assignment_title)}
+                              style={{
+                                padding: "4px 8px",
+                                fontSize: "11px",
+                                backgroundColor: "#fef2f2",
+                                color: "#dc2626",
+                                border: "1px solid #fecaca",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontWeight: "700"
+                              }}
+                              title="Delete Assignment Submission"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
                         ) : (
                           <span style={{ color: "#94a3b8", fontSize: "12px" }}>—</span>
                         )}
@@ -1653,46 +1719,64 @@ export default function Dashboard() {
                       </td>
 
                       <td style={{ padding: "12px" }}>
-                        {isCurrentTeacher ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontSize: "11px", fontWeight: "700", color: "#16a34a" }}>
-                              🛡️ Authorized
-                            </span>
-                            {st.id !== student?.id && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          {/* Role Promotion / Demotion */}
+                          {isCurrentTeacher ? (
+                            st.id !== student?.id && (
                               <button
-                                onClick={() => handleRoleChange(st.id, "student", st.name)}
+                                onClick={() => handleRoleChange(st.id, "student", studentDisplayName)}
                                 style={{
-                                  padding: "3px 8px",
-                                  fontSize: "10px",
-                                  backgroundColor: "#fee2e2",
-                                  color: "#dc2626",
-                                  border: "none",
-                                  borderRadius: "4px",
+                                  padding: "4px 8px",
+                                  fontSize: "11px",
+                                  backgroundColor: "#fef3c7",
+                                  color: "#b45309",
+                                  border: "1px solid #fde68a",
+                                  borderRadius: "6px",
                                   cursor: "pointer",
-                                  fontWeight: "600"
+                                  fontWeight: "700"
                                 }}
                               >
                                 Demote
                               </button>
-                            )}
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => handleRoleChange(st.id, "teacher", st.name)}
-                            style={{
-                              padding: "5px 10px",
-                              fontSize: "11px",
-                              backgroundColor: "#0f172a",
-                              color: "#fff",
-                              border: "none",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "700"
-                            }}
-                          >
-                            + Make Teacher
-                          </button>
-                        )}
+                            )
+                          ) : (
+                            <button
+                              onClick={() => handleRoleChange(st.id, "teacher", studentDisplayName)}
+                              style={{
+                                padding: "4px 8px",
+                                fontSize: "11px",
+                                backgroundColor: "#0f172a",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontWeight: "700"
+                              }}
+                            >
+                              + Make Teacher
+                            </button>
+                          )}
+
+                          {/* 🚫 Teacher Action: Remove User / Kick Student */}
+                          {st.id !== student?.id && (
+                            <button
+                              onClick={() => handleRemoveUser(st.id, studentDisplayName)}
+                              style={{
+                                padding: "4px 8px",
+                                fontSize: "11px",
+                                backgroundColor: "#fee2e2",
+                                color: "#dc2626",
+                                border: "1px solid #fca5a5",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontWeight: "700"
+                              }}
+                              title="Remove Student Account From System"
+                            >
+                              🚫 Remove User
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1723,8 +1807,8 @@ export default function Dashboard() {
               {registeredStudents.map((st) => (
                 <div key={st.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
                   <div>
-                    <p style={{ margin: "0 0 2px 0", fontWeight: "700", color: "#1e293b", fontSize: "14px" }}>{st.name}</p>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>{st.email}</p>
+                    <p style={{ margin: "0 0 2px 0", fontWeight: "700", color: "#1e293b", fontSize: "14px" }}>{getCleanName(st)}</p>
+                    <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>{st.course || "Diploma CS"} • {st.semester || "5th Sem"}</p>
                   </div>
                   <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 8px", borderRadius: "999px", backgroundColor: st.role === "teacher" ? "#fef3c7" : "#eff6ff", color: st.role === "teacher" ? "#b45309" : "#2563eb" }}>
                     {st.role === "teacher" ? "Faculty" : "Student"}
@@ -1819,7 +1903,7 @@ export default function Dashboard() {
                   type="text"
                   disabled
                   value={displayName}
-                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f1f5f9", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f1f5f9", boxSizing: "border-box", fontWeight: "700", color: "#1e293b" }}
                 />
               </div>
 
