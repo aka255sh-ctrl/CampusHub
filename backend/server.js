@@ -445,6 +445,50 @@ app.put("/api/doubts/:id/reply", (req, res) => {
   res.json({ message: "Reply submitted successfully!", doubt: item });
 });
 
+// ======================================
+// TEACHER ACTION: DELETE USER / REMOVE STUDENT ACCOUNT
+// ======================================
+app.delete("/api/admin/users/:id", (req, res) => {
+  const targetUserId = req.params.id;
+
+  // Pehle student ke related submissions delete karein taaki foreign key issue na aaye
+  db.query("DELETE FROM student_submissions WHERE student_id = ?", [targetUserId], (subErr) => {
+    if (subErr) {
+      console.error("Error clearing user submissions:", subErr);
+    }
+
+    // Ab user table se remove karein
+    const sql = "DELETE FROM users WHERE id = ?";
+    db.query(sql, [targetUserId], (err, result) => {
+      if (err) {
+        console.error("Error deleting user:", err);
+        return res.status(500).json({ message: "Failed to remove user from database." });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      return res.json({ message: "User account removed from portal successfully! 🗑️" });
+    });
+  });
+});
+
+// ======================================
+// TEACHER ACTION: DELETE SUBMISSION RECORD
+// ======================================
+app.delete("/api/admin/submissions/:id", (req, res) => {
+  const subId = req.params.id;
+  const sql = "DELETE FROM student_submissions WHERE id = ?";
+  db.query(sql, [subId], (err, result) => {
+    if (err) {
+      console.error("Error deleting submission:", err);
+      return res.status(500).json({ message: "Failed to delete submission record" });
+    }
+    return res.json({ message: "Assignment submission deleted successfully! 🗑️" });
+  });
+});
+
 // App listen
 app.listen(PORT, () => {
   console.log(`CampusHub server running on port ${PORT}`);
