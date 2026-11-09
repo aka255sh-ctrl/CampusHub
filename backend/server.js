@@ -493,3 +493,91 @@ app.delete("/api/admin/submissions/:id", (req, res) => {
 app.listen(PORT, () => {
   console.log(`CampusHub server running on port ${PORT}`);
 });
+
+// ==========================================
+// 1. REGISTRATION WITH PHONE, BRANCH, SEM, & VERIFICATION
+// ==========================================
+app.post("/api/auth/register-student", (req, res) => {
+  const { name, email, password, phone, branch, semester } = req.body;
+
+  if (!name || !email || !password || !phone || !branch || !semester) {
+    return res.status(400).json({ message: "All fields including phone, branch, and semester are required!" });
+  }
+
+  // Check if email already exists
+  db.query("SELECT * FROM users WHERE email = ?", [email], (checkErr, checkResult) => {
+    if (checkResult && checkResult.length > 0) {
+      return res.status(400).json({ message: "An account with this email already exists." });
+    }
+
+    const sql = `
+      INSERT INTO users (name, email, password, phone, branch, semester, role, is_verified) 
+      VALUES (?, ?, ?, ?, ?, ?, 'student', 1)
+    `;
+
+    db.query(sql, [name, email, password, phone, branch, semester], (err, result) => {
+      if (err) {
+        console.error("Registration error:", err);
+        return res.status(500).json({ message: "Database registration failed." });
+      }
+
+      res.status(201).json({
+        message: "Registration successful! Details submitted to Department Faculty. Please login.",
+        userId: result.insertId,
+      });
+    });
+  });
+});
+
+// ==========================================
+// 2. GOOGLE ONE-CLICK AUTHENTICATION
+// ==========================================
+app.post("/api/auth/google-login", (req, res) => {
+  const { name, email, googleId, picture } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Valid email is required from Google." });
+  }
+
+  // Check if user already registered with this Gmail
+  db.query("SELECT * FROM users WHERE email = ?", [email], (err, results) => {
+    if (err) return res.status(500).json({ message: "Database lookup error" });
+
+    if (results.length > 0) {
+      const user = results[0];
+      return res.json({
+        message: "Google Login Successful! 🎉",
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          branch: user.branch || "Computer Science",
+          semester: user.semester || "5th Sem",
+          phone: user.phone || "",
+        },
+      });
+    } else {
+      // Auto-register Google user if not present
+      const sql = `
+        INSERT INTO users (name, email, password, branch, semester, role, is_verified) 
+        VALUES (?, ?, 'GOOGLE_OAUTH_USER', 'Computer Science', '5th Sem', 'student', 1)
+      `;
+      db.query(sql, [name || email.split("@")[0], email], (insertErr, result) => {
+        if (insertErr) return res.status(500).json({ message: "Failed to create Google user profile." });
+
+        return res.json({
+          message: "Account created via Google! 🎉",
+          user: {
+            id: result.insertId,
+            name: name || email.split("@")[0],
+            email: email,
+            role: "student",
+            branch: "Computer Science",
+            semester: "5th Sem",
+          },
+        });
+      });
+    }
+  });
+});
