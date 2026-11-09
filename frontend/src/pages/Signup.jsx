@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 function Signup() {
   const navigate = useNavigate();
 
-  // Registration Fields
   const [name, setName] = useState("");
   const [branch, setBranch] = useState("Computer Science & Engineering");
   const [semester, setSemester] = useState("5th Semester");
@@ -14,7 +13,6 @@ function Signup() {
 
   const [loading, setLoading] = useState(false);
 
-  // Form Submit Handler
   const handleSignup = async (e) => {
     e.preventDefault();
 
@@ -72,7 +70,6 @@ function Signup() {
 
   return (
     <div className="auth-page">
-      {/* Left Section (Branding) */}
       <div className="auth-left">
         <div className="auth-brand">
           <h1>CampusHub</h1>
@@ -88,7 +85,6 @@ function Signup() {
         </div>
       </div>
 
-      {/* Right Section (Form) */}
       <div className="auth-right">
         <div className="auth-box">
           <div className="auth-header">
@@ -97,7 +93,6 @@ function Signup() {
           </div>
 
           <form onSubmit={handleSignup}>
-            {/* Full Name */}
             <div className="auth-form-group">
               <label>Full Official Name</label>
               <input
@@ -109,7 +104,6 @@ function Signup() {
               />
             </div>
 
-            {/* Branch / Department */}
             <div className="auth-form-group">
               <label>Department / Branch</label>
               <select
@@ -132,7 +126,6 @@ function Signup() {
               </select>
             </div>
 
-            {/* Semester */}
             <div className="auth-form-group">
               <label>Current Semester</label>
               <select
@@ -157,7 +150,6 @@ function Signup() {
               </select>
             </div>
 
-            {/* Email Address */}
             <div className="auth-form-group">
               <label>Email Address</label>
               <input
@@ -169,7 +161,6 @@ function Signup() {
               />
             </div>
 
-            {/* Password */}
             <div className="auth-form-group">
               <label>Password</label>
               <input
@@ -181,7 +172,6 @@ function Signup() {
               />
             </div>
 
-            {/* Confirm Password */}
             <div className="auth-form-group">
               <label>Confirm Password</label>
               <input
@@ -193,7 +183,6 @@ function Signup() {
               />
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="auth-submit"
@@ -207,11 +196,9 @@ function Signup() {
             </button>
           </form>
 
-          {/* Login Link */}
           <div className="auth-footer">
             <p>
-              Already registered?{" "}
-              <Link to="/login">Login</Link>
+              Already registered? <Link to="/login">Login</Link>
             </p>
           </div>
         </div>
