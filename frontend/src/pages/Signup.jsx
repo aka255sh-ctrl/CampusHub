@@ -8,49 +8,18 @@ function Signup() {
   const [name, setName] = useState("");
   const [branch, setBranch] = useState("Computer Science & Engineering");
   const [semester, setSemester] = useState("5th Semester");
-  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Phone Verification States
-  const [otpSent, setOtpSent] = useState(false);
-  const [enteredOtp, setEnteredOtp] = useState("");
-  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
-
   const [loading, setLoading] = useState(false);
-
-  // Send OTP Function
-  const handleSendOtp = () => {
-    if (!phone || phone.length < 10) {
-      alert("Please enter a valid 10-digit mobile number!");
-      return;
-    }
-    setOtpSent(true);
-    alert(`Verification code 1234 sent to +91 ${phone} (Test OTP: 1234)`);
-  };
-
-  // Verify OTP Function
-  const handleVerifyOtp = () => {
-    if (enteredOtp.trim() === "1234") {
-      setIsPhoneVerified(true);
-      alert("Mobile number verified successfully! ✅");
-    } else {
-      alert("Invalid OTP! For testing, please enter: 1234");
-    }
-  };
 
   // Form Submit Handler
   const handleSignup = async (e) => {
     e.preventDefault();
 
-    if (!name || !email || !password || !confirmPassword || !phone) {
+    if (!name || !email || !password || !confirmPassword) {
       alert("Please fill in all fields.");
-      return;
-    }
-
-    if (!isPhoneVerified) {
-      alert("Please verify your phone number with OTP first!");
       return;
     }
 
@@ -78,7 +47,6 @@ function Signup() {
             name,
             email,
             password,
-            phone,
             branch,
             semester,
           }),
@@ -88,7 +56,7 @@ function Signup() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Signup failed.");
+        alert(data.message || "Registration failed.");
         return;
       }
 
@@ -114,7 +82,7 @@ function Signup() {
         <div className="auth-message">
           <h2>Join CampusHub 🚀</h2>
           <p>
-            Create your verified student account with branch, semester, and mobile verification. 
+            Create your verified student account with branch and semester.
             All registrations are linked to the Department Faculty desk.
           </p>
         </div>
@@ -125,7 +93,7 @@ function Signup() {
         <div className="auth-box">
           <div className="auth-header">
             <h2>Student Registration</h2>
-            <p>Enter your academic & contact details to get started.</p>
+            <p>Enter your academic details to get started.</p>
           </div>
 
           <form onSubmit={handleSignup}>
@@ -134,6 +102,7 @@ function Signup() {
               <label>Full Official Name</label>
               <input
                 type="text"
+                required
                 placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -188,92 +157,12 @@ function Signup() {
               </select>
             </div>
 
-            {/* Mobile Phone Number with OTP Verification */}
-            <div className="auth-form-group">
-              <label>Mobile Number (For Verification)</label>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <input
-                  type="tel"
-                  maxLength="10"
-                  placeholder="10-digit number"
-                  disabled={isPhoneVerified}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  style={{ flex: 1 }}
-                />
-                {!isPhoneVerified ? (
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    style={{
-                      backgroundColor: "#0284c7",
-                      color: "#fff",
-                      border: "none",
-                      padding: "8px 14px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {otpSent ? "Resend OTP" : "Send OTP"}
-                  </button>
-                ) : (
-                  <span
-                    style={{
-                      backgroundColor: "#dcfce7",
-                      color: "#166534",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    ✓ Verified
-                  </span>
-                )}
-              </div>
-
-              {/* OTP Input Row */}
-              {otpSent && !isPhoneVerified && (
-                <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                  <input
-                    type="text"
-                    maxLength="4"
-                    placeholder="Enter 4-digit OTP (1234)"
-                    value={enteredOtp}
-                    onChange={(e) => setEnteredOtp(e.target.value)}
-                    style={{ flex: 1, padding: "8px" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleVerifyOtp}
-                    style={{
-                      backgroundColor: "#16a34a",
-                      color: "#fff",
-                      border: "none",
-                      padding: "8px 14px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Verify
-                  </button>
-                </div>
-              )}
-            </div>
-
             {/* Email Address */}
             <div className="auth-form-group">
               <label>Email Address</label>
               <input
                 type="email"
+                required
                 placeholder="Enter your college or personal email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -285,7 +174,8 @@ function Signup() {
               <label>Password</label>
               <input
                 type="password"
-                placeholder="Create a password"
+                required
+                placeholder="Create a password (min 6 characters)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -296,6 +186,7 @@ function Signup() {
               <label>Confirm Password</label>
               <input
                 type="password"
+                required
                 placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -306,17 +197,13 @@ function Signup() {
             <button
               type="submit"
               className="auth-submit"
-              disabled={loading || !isPhoneVerified}
+              disabled={loading}
               style={{
-                cursor: loading || !isPhoneVerified ? "not-allowed" : "pointer",
-                opacity: !isPhoneVerified ? 0.7 : 1,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading
-                ? "Registering Account..."
-                : isPhoneVerified
-                ? "Create Account & Send to Faculty →"
-                : "Verify Phone First"}
+              {loading ? "Registering Account..." : "Create Account & Send to Faculty →"}
             </button>
           </form>
 

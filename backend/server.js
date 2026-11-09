@@ -207,11 +207,11 @@ app.post("/api/attendance/close", (req, res) => {
 // TEACHER: REGISTERED USERS & DELEGATION LIST
 // ======================================
 app.get("/api/admin/students", (req, res) => {
-  const sql = "SELECT id, name, email, role, course, semester, created_at FROM users ORDER BY id DESC";
+  const sql = "SELECT id, name, email, role, course, semester, branch, phone, is_verified FROM users ORDER BY id DESC";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error("Error fetching users list:", err);
-      return res.status(500).json({ message: "Error fetching users" });
+      console.error("Error fetching users:", err);
+      return res.status(500).json({ message: "Failed to fetch users" });
     }
     res.json({ students: results });
   });
@@ -495,27 +495,32 @@ app.listen(PORT, () => {
 });
 
 // ==========================================
-// 1. REGISTRATION WITH PHONE, BRANCH, SEM, & VERIFICATION
+// STUDENT REGISTRATION (NO PHONE / NO OTP)
 // ==========================================
 app.post("/api/auth/register-student", (req, res) => {
-  const { name, email, password, phone, branch, semester } = req.body;
+  const { name, email, password, branch, semester } = req.body;
 
-  if (!name || !email || !password || !phone || !branch || !semester) {
-    return res.status(400).json({ message: "All fields including phone, branch, and semester are required!" });
+  if (!name || !email || !password || !branch || !semester) {
+    return res.status(400).json({ message: "Name, branch, semester, email, and password are required!" });
   }
 
-  // Check if email already exists
-  db.query("SELECT * FROM users WHERE email = ?", [email], (checkErr, checkResult) => {
+  // Check if student email is already registered
+  db.query("SELECT id FROM users WHERE email = ?", [email], (checkErr, checkResult) => {
+    if (checkErr) {
+      console.error("Email lookup error:", checkErr);
+      return res.status(500).json({ message: "Database lookup failed." });
+    }
+
     if (checkResult && checkResult.length > 0) {
-      return res.status(400).json({ message: "An account with this email already exists." });
+      return res.status(400).json({ message: "An account with this email already exists. Please login." });
     }
 
     const sql = `
-      INSERT INTO users (name, email, password, phone, branch, semester, role, is_verified) 
-      VALUES (?, ?, ?, ?, ?, ?, 'student', 1)
+      INSERT INTO users (name, email, password, branch, semester, role, is_verified) 
+      VALUES (?, ?, ?, ?, ?, 'student', 1)
     `;
 
-    db.query(sql, [name, email, password, phone, branch, semester], (err, result) => {
+    db.query(sql, [name.trim(), email.trim(), password, branch, semester], (err, result) => {
       if (err) {
         console.error("Registration error:", err);
         return res.status(500).json({ message: "Database registration failed." });
@@ -526,6 +531,20 @@ app.post("/api/auth/register-student", (req, res) => {
         userId: result.insertId,
       });
     });
+  });
+});
+
+// ==========================================
+// GET ALL STUDENTS FOR FACULTY DASHBOARD
+// ==========================================
+app.get("/api/admin/students", (req, res) => {
+  const sql = "SELECT id, name, email, role, branch, semester, is_verified FROM users ORDER BY id DESC";
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Error fetching students:", err);
+      return res.status(500).json({ message: "Failed to fetch users." });
+    }
+    res.json({ students: results });
   });
 });
 

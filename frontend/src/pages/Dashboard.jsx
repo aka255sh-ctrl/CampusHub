@@ -1622,9 +1622,16 @@ export default function Dashboard() {
                       <td style={{ padding: "12px", fontWeight: "600", color: "#64748b" }}>#{st.id}</td>
                       <td style={{ padding: "12px" }}>
                         <div style={{ fontWeight: "800", color: "#1e293b", fontSize: "14px" }}>{getCleanName(st)}</div>
-                        <div style={{ fontSize: "11px", color: "#0284c7", fontWeight: "600" }}>{st.branch || "Computer Science"} • {st.semester || "5th Sem"}</div>
-                        <div style={{ fontSize: "11px", color: "#16a34a", fontWeight: "700" }}>📱 {st.phone || "9876543210"} (Verified)</div>
-                        </td>
+                        <div style={{ fontSize: "11px", color: "#0284c7", fontWeight: "600" }}> {st.branch || "Computer Science"} • {st.semester || "5th Sem"}</div>
+                        {st.phone ? (
+                          <div style={{ fontSize: "11px", color: st.is_verified ? "#16a34a" : "#d97706", fontWeight: "700" }}>
+                            📱 {st.phone} {st.is_verified ? "(Verified)" : "(Unverified)"}</div>
+                            ) : (
+                            <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "500" }}>
+                              📱 No phone linked
+                              </div>
+                            )}
+                          </td>
 
                       <td style={{ padding: "12px" }}>
                         <span style={{
